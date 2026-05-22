@@ -3,19 +3,12 @@
 
 ## 1. Three-Sentence Specification
 
-1. What program does?
-   Program Track items what they own, bookings (active), delivery, what customers owe, manage payments, items (damaged, under maintenance), delivered, available etc. all through CLI.
-
-2. Who use it ? 
-  Both Rakesh ji and Ankit use it - Rakesh ji makes decisions (pricing, discounts, refunds, cancellations) while Ankit handles day-to-day data entry (logging deliveries, recording returns, adding customers).
-
-3. What done means ?
-  Done means Rakesh ji can answer his 6 questions - availability check, what items are delivered and at which event, return dates, payment balances, monthly damaged items report, which items are idle, history of a particular event. Also the program will stop him from double booking and close booking only when all items are returned.
+Sharma Tent House rents out physical items - chairs, gas burners, sofas - and needs a CLI program to track what they own, what is committed to upcoming events, and what customers owe at any point in time. Rakesh ji makes all business decisions (pricing, discounts, cancellations, refunds) while Ankit handles day-to-day data entry (logging deliveries, recording returns, adding customers). The program is done when Rakesh ji can check item availability for any date range without double-booking, track every rupee across a booking's full money lifecycle, and close a booking only after all items are accounted for.
 
 ---
 ## 2. The Information Your Program Must Remember
 
-### (1) Items (That Sharmaji Tent House owns & rents out)
+### Section A - Items (That Sharmaji Tent House owns & rents out)
 
 | Field          | Type   | Required | Example                       |
 |----------------|--------|----------|-------------------------------|
@@ -23,12 +16,13 @@
 | name           | string | Yes      | "Folding Chair", "Gas Burner" |
 | total_quantity | int    | Yes      | Total owned                   |
 | rate_per_day   | float  | Yes      | Price for one unit            |
-| available_qty  | int    | Yes      | Available items               |
 | item_type      | string | Yes      | Quantity / Unique / Limited   |
 
+**Availability query (derived, not stored):**
+`available_qty(item, date_range) = total_qty - SUM(booked_items.quantity WHERE booking overlaps date_range)`
 ---
 
-## (2) Customers
+### Section B - Customers
 
 | Field           | Type   | Required |
 |-----------------|--------|----------|
@@ -41,24 +35,26 @@
 
 ---
 
-## (3) Booking
+### Section C - Bookings
 
-| Field          | Type   | Required |
-|----------------|--------|----------|
-| booking_id     | string | Required |
-| cust_id        | string | Required |
-| items          | list   | Required |
-| total_price    | float  | Required |
-| event_name     | string | Required |
-| start_date     | date   | Required |
-| return_date    | date   | Required |
-| deposit_paid   | bool   | Required |
-| balance_amount | float  | Required |
-| delivery_date  | date   | Optional |
+| Field              | Type   | Required | Notes                                                 |
+|--------------------|--------|----------|-------------------------------------------------------|
+| booking_id         | string | Required |                                                       |
+| cust_id            | string | Required |                                                       |
+| event_name         | string | Required |                                                       |
+| start_date         | date   | Required |                                                       |
+| return_datetime    |datetime| Required | Date + time; needed for same-day overlap resolutionn  |
+| delivery_date      | date   | Optional |                                                       |
+| total_rental_amount| float  | Required | Sum of all booked item charges                        |
+| advance_paid       | float  | Required | Amount paid at booking time                           |
+| deposit_amount     | float  | Required | Refundable security; held separately from advance     |
+| deposit_returned   | float  | Required | How much of the deposit was actually returned         |
+| balance_due        | float  | Required | Recalculated at close-out after all charges           |
+| status             | string | Required | active / delivered / closed / cancelled               |
 
 ---
 
-## (4) Booked Items
+### Section D - Booked Items
 
 | Field        | Type   | Required |
 |--------------|--------|----------|
@@ -66,23 +62,24 @@
 | quantity     | int    | Required |
 | rate_per_day | float  | Required |
 | booking_id   | string | Required |
-
+| item_name    | string | Required | 
 ---
 
-## (5) Return Record
+### Section E - Return Records
 
-| Field         | Type   | Required |
-|---------------|--------|----------|
-| return_id     | string | Required |
-| booking_id    | string | Required |
-| return_date   | date   | Required |
-| extra_days    | int    | Required |
-| extra_charges | float  | Required |
-| damage_items  | list   | Optional |
+| Field            | Type     | Required |      Notes                                         |
+|------------------|----------|----------|----------------------------------------------------|
+| return_id        | string   | Required |                                                    |
+| booking_id       | string   | Required |                                                    |
+| return_datetime  | datetime | Required | Date + time, not date only                         |
+| items_returned   | list     | Required | List of {item_id, qty} actually returned this time |
+| extra_days       | int      | Required | Days past expected return_datetime                 |
+| extra_charges    | float    | Required | extra_days × per-day rate for each item            |
 
+> A booking may have **multiple return records** (partial returns). The booking stays open until the sum of all `items_returned` across all return records equals the original booked quantities.
 ---
 
-## (6) Payments
+### Section F - Payments
 
 | Field        | Type   | Required |
 |--------------|--------|----------|
@@ -90,149 +87,172 @@
 | booking_id   | string | Required |
 | payment_date | date   | Required |
 | total_amount | float  | Required |
-| type         | string | Required |(deposit / balance / extra charges) |
+| type         | string | Required |advance / balance / extra_charges / damage / deposit_refund / deposit_extra |
+| direction    | string | Required | in (customer pays us) / out (we refund customer)                           |
 
 ---
 
-## (7) Delivery Record
+### Section G - Delivery Records
 
 | Field           | Type   | Required |
 |-----------------|--------|----------|
 | Delivery_id     | string | Required |
 | Booking_id      | string | Required |
 | delivery_date   | date   | Required |
-| delivery_status | string | Optional |
+| delivery_status | string | Optional | pending / dispatched / delivered |
 
 ---
 
-## (8) Damage
+### Section H - Damage Records
 
 | Field        | Type   | Required |
 |--------------|--------|----------|
 | damage_id    | string | Required |
 | booking_id   | string | Required |
+| return_id    | string | Required | Links to the return event where damage was found |
 | item_id      | string | Required |
 | qty          | int    | Required |
+| damage_type  | string | Required | `broken` / `missing` / `unusable` |
 | extra_charge | float  | Optional |
 
 ---
 
-## (9) Maintenance Record
+### Section I - Maintenance Records
 
-| Field     | Type   | Required |
-|-----------|--------|----------|
-| item_id   | string | Required |
-| item_type | string | Required |
-| name      | string | Required |
-| qty       | int    | Required |
-|  amount   | float  | Required |
+One row represents **one maintenance event** for a specific item — when it started, its current status, and when it was resolved. 
 
+| Field            | Type   | Required | Notes                                      |
+|------------------|--------|----------|--------------------------------------------|
+| maintenance_id   | string | Required | Unique per event                           |
+| item_id          | string | Required |                                            |
+| item_name        | string | Required |                                            |
+| qty_under_repair | int    | Required | Units sent for this repair event           |
+| start_date       | date   | Required | When item was sent for repair              |
+| end_date         | date   | Optional | When item came back; null if still ongoing |
+| status           | string | Required | ongoing / resolved                         |
+| cost             | float  | Required | Repair cost for this event                 |
+
+> Units under ongoing maintenance (`status = ongoing`) must be subtracted from `total_qty` when computing availability, alongside committed booking quantities.
 
 ---
 
 ## Relationships Summary
 
-- **Booking <-> Customers:** One customer can have many bookings over the years. `cust_id` on the booking links back to the customer. When Rakesh ji looks up a customer by phone number, the program pulls all their bookings and shows a history - total spent, number of events, any remaining balance.
-- **Items -> Booked Items:** Every booking carries a list of items with quantities. The availability check for any date works by scanning all active bookings, finding every booking whose date range overlaps the requested dates, summing up committed quantities per item, and subtracting from total stock. This is the central logic of the whole program.
-- **Payments -> Booking:** For tracking payments (deposit / balance / extra charges) for all bookings.
-- **Damage -> Booking:** How many damages to booking & there per booking & for that damage, how much we have to charge.
-- **Return -> Booking:** When booked items of any booking are returned.
-- **Delivery -> Booking:** For any particular booking, when delivery happens.
+- **Booking -> Customers:** One customer can have many bookings. `cust_id` on the booking links back. When Rakesh ji looks up a customer by phone, the program pulls all their bookings - total spent, number of events, remaining balance.
+- **Booking -> Booked Items:** Section D is the only source of item-level detail per booking. Availability for a date range is computed by scanning Section D across all active bookings whose windows overlap.
+- **Booking -> Payments (Section F):** Every money event in the full lifecycle - advance, balance, damage charges, deposit settlement - is a row here.
+- **Booking -> Damage (Section H):** Damage facts live here only; Return Records do not duplicate them.
+- **Booking -> Return Records (Section E):** Multiple partial-return records per booking are allowed. Booking closes only when all quantities are accounted for.
+- **Booking -> Delivery (Section G):** One delivery record per booking.
+- **Items -> Maintenance (Section I):** Ongoing maintenance reduces effective available quantity at query time.
 
 ---
 ## (4) File Structure – JSON
 
-### customers.json
+Each entity gets its own JSON file. All files are arrays of objects.
+
+```
+customers.json
+items.json
+bookings.json
+booked_items.json
+return_records.json
+payments.json
+delivery_records.json
+damage_records.json
+maintenance_records.json
+```
+
+### customers.json (example)
 
 ```json
 [
   {
-    "cust_id": "C01",
-    "Name": "Monu",
-    "phone-no": "9142-...",
+    "cust_id": "C001",
+    "name": "Monu",
+    "phone": "91420XXXXX",
     "address": "Kathua, J&K",
-    "Alt-ph": "9142 9-...",
-    "E-mail": "monu@gmail.com"
+    "alternate_phone": "91429XXXXX",
+    "email": "monu@gmail.com"
   }
 ]
 ```
-*(for all)*
-
----
-
 ### What breaks at 5,000 bookings a year?
 
-Loading all of `bookings.json` into memory to check availability on a single date means reading thousands of records every time. Right now this is fine — Python can scan 2,000 bookings in milliseconds. But at 5,000+ bookings the file itself starts becoming large, reads slow down, and saving the whole file on every write becomes risky (if the program crashes mid-write, the file can corrupt). The right move at that scale is to shift to some DB.
+>  JSON files loaded fully into memory are fine up to roughly 2,000–3,000 bookings. At 5,000+ bookings per year, full-file reads on every availability check slow down, and a crash mid-write can corrupt the file. The right move at that scale is SQLite or a similar embedded database — the schema above maps directly to relational tables.
+---
 
+## 5. Operations
 
-## (5) Operations
+1. **Availability check** -> scan Booked Items for all bookings whose `delivery_date`-`return_datetime` overlaps the requested range; also subtract units under ongoing maintenance; subtract from `total_qty`; show result.
 
-1. **If Rakeshji checks availability of item** -> system checks at some date all bookings where delivery date & return date overlaps the days, sums up committed qty & subtracts from total qty - and shows available.
+2. **Update item price** -> update `rate_per_day` on Items; show updated record. Note: existing bookings retain the rate snapshot in Booked Items (Section D) - they are not changed.
 
-2. **If Rakeshji updates item details like price** -> system should update price & show updated details.
+3. **Close a booking** -> verify sum of returned quantities across all Return Records equals original booked quantities; if not, refuse: *"Cannot close B_001 - still out: 4× Gas Burner, 1× Imported Sofa."* Also verify balance_due = 0 and deposit is settled.
 
-3. **If Rakeshji wants to close a booking** -> system checks whether all items are returned; if not, refuses ("can't close").
+4. **Calculate total rental amount** -> sum across Booked Items: `quantity × rate_per_day × number_of_days`; store on Booking as `total_rental_amount`.
 
-4. **Rakeshji wants to check total amount** -> system checks items booked, rate per day, multiplies & shows actual amount.
+5. **View booking** -> load Booking + Customer + all Booked Items + Payment history; display full picture.
 
-5. **If Rj wants to check booking** -> system loads booking + customer + payment history.
+6. **Add items to existing booking** -> check availability for the booking's date range first; add only what is available; update Booked Items and recalculate `total_rental_amount`; reject or partially fulfil if stock is short.
 
-6. **If user adds more items to existing booking** -> system checks availability first, then adds; updates booking & rejects if not available.
+7. **Check missing items** -> `total delivered - total returned` per item per booking; flag for this.
 
-7. **If Rakeshji wants to restock / check missing items** -> system should check total items delivered - returned items = missing items.
+8. **Check balance due** -> `balance_due = total_rental_amount - SUM(payments where type IN (advance, balance))`. Deposit is tracked and settled separately - it is not subtracted from the rental bill.
 
-8. **If Rakeshji wants to check balance** -> system should show: total amount - deposit = balance.
+9. **Process refund** -> calculate refund amount; create a Payment row with `direction = out`, `type = deposit_refund`; update `deposit_returned` on Booking.
 
-9. **If Rj wants to refund to any customer** -> system checks item price & total items and shows refunded price.
+10. **Check delivery date** -> read delivery_date from Delivery Records for the booking.
 
-10. **If Rj wants to check delivery date of items** -> system checks booking, delivery date & shows it to user.
+11. **Add item to inventory** -> create or update Items row; `total_qty` increases; show result.
 
-11. **If user wants to add items into inventory** -> system should update it & show results.
+12. **Late return charges** -> `extra_days = days past return_datetime × per-day rate per item`; create Payment row with `type = extra_charges`.
 
-12. **If Rj wants to check late return charges** -> system should check extra days from expected return date × extra charges = late return charges.
+13. **Search customer by phone** -> match phone in Customers; show customer details and booking history.
 
-13. **If Rakeshji searches customer by phone number** -> system matches the details with customer details & shows result.
+14. **Add customer** -> save details; generate new `cust_id`; confirm.
 
-14. **If Rakeshji wants to add any customer** -> system should save details, generate new cust_id.
+15. **Create booking** -> check availability for requested date range (including maintenance units); if available, create Booking row + Booked Items rows + generate `booking_id`; reduce effective available stock in future queries automatically.
 
-15. **If Rakeshji does a booking** -> system should check items before booking, check whether available or not, then generates booking_id.
+16. **Record partial return** -> create a Return Record with the items returned so far; show remaining unreturned items; keep booking open.
 
-16. **If Rakeshji records a partial return** -> system marks pending items -> shows remaining items.
+17. **Monthly damage report** -> sum `extra_charge` across Damage Records for the month; group by item; display losses.
 
-17. **If Rakeshji views monthly damage report** -> system totals damage charges & displays losses.
+18. **Customer history** -> look up by phone or cust_id; show all past bookings, total spent, total days, any open balance.
 
-18. **If Rj views customer history** -> system prompts for cust_no / ID -> shows all past bookings, total spent, days.
+19. **View idle items** -> items with no active booking in the last 30 days; compare `total_qty` against committed quantities in that window.
 
-19. **View idle items** -> system compares total qty with any booking in last 30 days -> system shows items with low usage.
-
-20. **If Rakeshji selects "Exit"** -> system saves all data to JSON -> exits.
+20. **Exit** -> save all in-memory changes to JSON files; exit.
 
 ---
-## (6) Edge Cases (This Can Go Wrong!)
 
-1. JSON file doesn't exist on first run.
+---
 
-2. If customer adds 850 / 600 chairs, maybe our system has 500/200 chairs, but program shows not available / rejects booking (loss).
+## 6. Edge Cases
 
-3. If customer books an item on 19 Dec - at evening, but system says there are no available items (in a case if items are returned at 19-Dec at morning) - system doesn't show that items are available at evening; it simply rejects bookings. (Loss - for business.)
+1. **JSON file missing on first run** -> program creates empty files with valid `[]` structure; does not crash.
 
-4. If Ankit / Rakeshji forgot to record missing items & made delivery as "returned" -> Business loss.
+2. **Customer requests more than stock** -> availability check rejects or offers the maximum available: *"Only 200 chairs available on those dates; you requested 850."* Rakesh ji decides whether to proceed with 200 or decline.
 
-5. If multiple events ended same week & multiple items returned but some are broken - maybe Rakeshji forgets which event caused the damage. Business loss. -> Incorrect bill.
+3. **Morning return, evening booking on the same day** -> Return Records store `return_datetime` (date + time). Booking's `delivery_date` is a date; if needed, delivery time can be added as `delivery_datetime`. The overlap check compares datetimes, not dates. Items returned at 10 AM are available for a booking starting at 6 PM on the same day. This requires Ankit to record actual return time, not just date.
 
-6. Customer cancels booking 3 days before event - Rakeshji already told his team to prepare delivery, & refused another booking for their chairs -> Lost revenue. Program should have a cancellation policy.
+4. **Delivery marked as returned without recording missing items** -> programme shows discrepancy: `delivered qty - returned qty = missing qty` per item. Closing the booking is blocked until this is resolved.
 
-7. Rakeshji tries to close a booking but some items have not been returned. Program refuses: "Cannot close B_id - still remaining: 4× Gas Burner, 1× Imported Sofa." 
+5. **Multiple events ending the same week; damage attribution unclear** -> every Damage Record is linked to a `booking_id`. When Ankit logs damage at return time, the booking_id is already in context - he cannot log damage without it. This forces attribution at the moment of return.
 
-8. Customer wants to add 50 more chairs. Rakeshji edits the booking - program checks availability - only 25 more are available and others are committed. Can't add 50. Rj then decides to add 25 only. or rejects it.
+6. **Cancellation policy** -> cancellation creates a Payment row (`direction = out, type = deposit_refund`) according to the policy (e.g., full refund if cancelled 7+ days out, 50% within 3–6 days, no refund within 2 days). Programme enforces the policy and shows the refund amount before confirming cancellation.
 
-9. Damage exceeds the deposit / program calculates this in the settlement 3 chances: Deposit = Rs 3000, damage = 5000 -> customer should pay 2000 extra - alert Rakeshji for this.
+7. **Closing a booking with unreturned items** -> refused: *"Cannot close B_001 - still out: 4× Gas Burner."* Programme lists exactly what is missing.
 
-10. Rakeshji tries to delete an item that has active bookings. Program refuses - "Can't delete, close / cancel bookings first."
+8. **Customer wants to add 50 chairs; only 25 available** -> programme responds: *"Only 25 chairs available on those dates. Add 25 instead, or cancel the request."* Rakesh ji chooses.
 
-11. Customer returns half items before return date & half remain - but program just checks here returns; it can't show availability or partial returns -> Loss.
+9. **Damage charges exceed deposit** -> `deposit_amount − (damage + missing item charges) < 0` → alert: *"Deposit of ₹3,000 is short by ₹2,000. Customer owes an additional ₹2,000."* Create a Payment row with `type = deposit_extra, direction = in`.
 
-12. If a postponed event wants to change date of booking -> system should check re-availability.
+10. **Deleting an item with active bookings** -> refused: *"Cannot delete ITEM_001 - active bookings exist. Close or cancel bookings first."*
+
+11. **Partial returns** -> Return Records support multiple rows per booking (Section E). Programme sums returned quantities across all rows and shows remaining items. Availability for other bookings updates correctly because availability is always derived from Booked Items minus returned quantities.
+
+12. **Postponed event / date change** -> programme re-runs availability check for the new date range before allowing the change. If a conflict exists, it reports which bookings clash.
 
 ---
 
@@ -245,10 +265,10 @@ Loading all of `bookings.json` into memory to check availability on a single dat
 
 - Unsure how to check availability when delivery date & return date overlaps between multiple bookings.
 
-- If with customer Rakesh ji has to handles different prices -> how? I don't know yet.
-
-- How to handle partial returns - (the program keeps booking open until all items are returned).
+- How to handle per-customer negotiated prices without corrupting the standard rate on the Items table?
 
 - Rakeshji - not a fast typist - how to make CLI easy? (menu system?) - Yes, what about sub-menus?
 
 - Story says close at night, open in morning -> how to implement this? -> Date comparison logic needed - need experimentation.
+
+- How to handle a booking that spans two calendar months for monthly reporting purposes?
