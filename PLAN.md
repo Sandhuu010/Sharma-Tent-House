@@ -15,12 +15,17 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 | item_id        | string | Yes      | ITEM_001                      |
 | name           | string | Yes      | "Folding Chair", "Gas Burner" |
 | total_quantity | int    | Yes      | Total owned                   |
-| rate_per_day   | float  | Yes      | Price for one unit            |
+| rate_per_day   | decimal| Yes      | Price for one unit            |
 | item_type      | string | Yes      | Quantity / Unique / Limited   |
 
 **Availability query (derived, not stored):**
-`available_qty(item, date_range) = total_qty - SUM(booked_items.quantity WHERE booking overlaps date_range)`
----
+ ```
+ available_qty(item, date_range) =
+     total_qty
+     - SUM( booked_qty - returned_qty  FOR EACH booking that overlaps date_range )
+     - SUM( qty_under_repair           FOR EACH ongoing maintenance record for this item )
+ ```
+ --- 
 
 ### Section B - Customers
 
@@ -49,8 +54,9 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 | advance_paid       | float  | Required | Amount paid at booking time                           |
 | deposit_amount     | float  | Required | Refundable security; held separately from advance     |
 | deposit_returned   | float  | Required | How much of the deposit was actually returned         |
-| balance_due        | float  | Required | Recalculated at close-out after all charges           |
 | status             | string | Required | active / delivered / closed / cancelled               |
+
+> **`balance_due` is not stored.** Keeping a stored copy alongside a computed formula creates two sources of truth. Computing it on demand from the Payments table always reflects the real state.
 
 ---
 
@@ -60,9 +66,11 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 |--------------|--------|----------|
 | item_id      | string | Required |
 | quantity     | int    | Required |
-| rate_per_day | float  | Required |
+| rate_per_day | decimal| Required |
 | booking_id   | string | Required |
-| item_name    | string | Required | 
+
+ > **Why no `item_name` here?** .Name is looked up from the Items table at display time using `item_id`. Only the rate snapshot stays here.
+
 ---
 
 ### Section E - Return Records
@@ -124,8 +132,6 @@ One row represents **one maintenance event** for a specific item — when it sta
 | Field            | Type   | Required | Notes                                      |
 |------------------|--------|----------|--------------------------------------------|
 | maintenance_id   | string | Required | Unique per event                           |
-| item_id          | string | Required |                                            |
-| item_name        | string | Required |                                            |
 | qty_under_repair | int    | Required | Units sent for this repair event           |
 | start_date       | date   | Required | When item was sent for repair              |
 | end_date         | date   | Optional | When item came back; null if still ongoing |
@@ -136,7 +142,7 @@ One row represents **one maintenance event** for a specific item — when it sta
 
 ---
 
-## Relationships Summary
+## 3. Relationships Summary
 
 - **Booking -> Customers:** One customer can have many bookings. `cust_id` on the booking links back. When Rakesh ji looks up a customer by phone, the program pulls all their bookings - total spent, number of events, remaining balance.
 - **Booking -> Booked Items:** Section D is the only source of item-level detail per booking. Availability for a date range is computed by scanning Section D across all active bookings whose windows overlap.
@@ -147,7 +153,7 @@ One row represents **one maintenance event** for a specific item — when it sta
 - **Items -> Maintenance (Section I):** Ongoing maintenance reduces effective available quantity at query time.
 
 ---
-## (4) File Structure – JSON
+## 4. File Structure – JSON
 
 Each entity gets its own JSON file. All files are arrays of objects.
 
@@ -226,8 +232,6 @@ maintenance_records.json
 
 ---
 
----
-
 ## 6. Edge Cases
 
 1. **JSON file missing on first run** -> program creates empty files with valid `[]` structure; does not crash.
@@ -256,7 +260,7 @@ maintenance_records.json
 
 ---
 
-## Open Questions / Unsolved Problems
+## 7. Open Questions / Unsolved Problems
 
 
 - How to automatically update inventory quantities automatically after deliveries & returns, and changes without inconsistency?
