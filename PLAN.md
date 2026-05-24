@@ -42,19 +42,19 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 
 ### Section C - Bookings
 
-| Field              | Type   | Required | Notes                                                 |
-|--------------------|--------|----------|-------------------------------------------------------|
-| booking_id         | string | Required |                                                       |
-| cust_id            | string | Required |                                                       |
-| event_name         | string | Required |                                                       |
-| start_date         | date   | Required |                                                       |
-| return_datetime    |datetime| Required | Date + time; needed for same-day overlap resolutionn  |
-| delivery_date      | date   | Optional |                                                       |
-| total_rental_amount| float  | Required | Sum of all booked item charges                        |
-| advance_paid       | float  | Required | Amount paid at booking time                           |
-| deposit_amount     | float  | Required | Refundable security; held separately from advance     |
-| deposit_returned   | float  | Required | How much of the deposit was actually returned         |
-| status             | string | Required | active / delivered / closed / cancelled               |
+| Field               | Type     | Required | Notes                                                  |
+|---------------------|----------|----------|--------------------------------------------------------|
+| booking_id          | string   | Required |                                                        |
+| cust_id             | string   | Required |                                                        |
+| event_name          | string   | Required |                                                        |
+| start_date          | date     | Required |                                                        |
+| return_datetime     | datetime | Required | Date + time; needed for same-day overlap resolution    |
+| delivery_date       | date     | Optional |                                                        |
+| total_rental_amount | decimal  | Required | Sum of all booked item charges                         |
+| advance_paid        | decimal  | Required | Amount paid at booking time                            |
+| deposit_amount      | decimal  | Required | Refundable security; held separately from advance      |
+| deposit_returned    | decimal  | Required | How much of the deposit was actually returned          |
+| status              | string   | Required | active / delivered / closed / cancelled                |
 
 > **`balance_due` is not stored.** Keeping a stored copy alongside a computed formula creates two sources of truth. Computing it on demand from the Payments table always reflects the real state.
 
@@ -82,7 +82,7 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 | return_datetime  | datetime | Required | Date + time, not date only                         |
 | items_returned   | list     | Required | List of {item_id, qty} actually returned this time |
 | extra_days       | int      | Required | Days past expected return_datetime                 |
-| extra_charges    | float    | Required | extra_days × per-day rate for each item            |
+| extra_charges    | decimal  | Required | extra_days × per-day rate for each item            |
 
 > A booking may have **multiple return records** (partial returns). The booking stays open until the sum of all `items_returned` across all return records equals the original booked quantities.
 ---
@@ -94,7 +94,7 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 | payment_id   | string | Required |
 | booking_id   | string | Required |
 | payment_date | date   | Required |
-| total_amount | float  | Required |
+| total_amount | decimal| Required |
 | type         | string | Required |advance / balance / extra_charges / damage / deposit_refund / deposit_extra |
 | direction    | string | Required | in (customer pays us) / out (we refund customer)                           |
 
@@ -121,7 +121,7 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 | item_id      | string | Required |
 | qty          | int    | Required |
 | damage_type  | string | Required | `broken` / `missing` / `unusable` |
-| extra_charge | float  | Optional |
+| extra_charge | decimal| Optional |
 
 ---
 
@@ -129,16 +129,15 @@ Sharma Tent House rents out physical items - chairs, gas burners, sofas - and ne
 
 One row represents **one maintenance event** for a specific item — when it started, its current status, and when it was resolved. 
 
-| Field            | Type   | Required | Notes                                      |
-|------------------|--------|----------|--------------------------------------------|
-| maintenance_id   | string | Required | Unique per event                           |
-| qty_under_repair | int    | Required | Units sent for this repair event           |
-| start_date       | date   | Required | When item was sent for repair              |
-| end_date         | date   | Optional | When item came back; null if still ongoing |
-| status           | string | Required | ongoing / resolved                         |
-| cost             | float  | Required | Repair cost for this event                 |
-
-> Units under ongoing maintenance (`status = ongoing`) must be subtracted from `total_qty` when computing availability, alongside committed booking quantities.
+| Field            | Type    | Required | Notes                                      |
+|------------------|---------|----------|--------------------------------------------|
+| maintenance_id   | string  | Required | Unique per event                           |
+| item_id          | string  | Required | Which item is under repair                 |
+| qty_under_repair | int     | Required | Units sent for this repair event           |
+| start_date       | date    | Required | When item was sent for repair              |
+| end_date         | date    | Optional | When item came back; null if still ongoing |
+| status           | string  | Required | ongoing / resolved                         |
+| cost             | decimal | Required | Repair cost for this event                 |
 
 ---
 
@@ -150,7 +149,7 @@ One row represents **one maintenance event** for a specific item — when it sta
 - **Booking -> Damage (Section H):** Damage facts live here only; Return Records do not duplicate them.
 - **Booking -> Return Records (Section E):** Multiple partial-return records per booking are allowed. Booking closes only when all quantities are accounted for.
 - **Booking -> Delivery (Section G):** One delivery record per booking.
-- **Items -> Maintenance (Section I):** Ongoing maintenance reduces effective available quantity at query time.
+- **Items -> Maintenance (Section I):** Each maintenance record carries `item_id`. Ongoing maintenance reduces effective available quantity at query time.
 
 ---
 ## 4. File Structure – JSON
@@ -169,23 +168,118 @@ damage_records.json
 maintenance_records.json
 ```
 
-### customers.json (example)
+### customers.json
 
 ```json
 [
   {
     "cust_id": "C001",
-    "name": "Monu",
-    "phone": "91420XXXXX",
+    "name": "Monu Sharma",
+    "phone": "9142012345",
     "address": "Kathua, J&K",
-    "alternate_phone": "91429XXXXX",
+    "alternate_phone": "9142098765",
     "email": "monu@gmail.com"
   }
 ]
 ```
+
+### items.json
+
+```json
+[
+  { "item_id": "ITEM_001", "name": "Folding Chair",  "total_quantity": 500, "rate_per_day": "5.00",  "item_type": "Quantity" },
+  { "item_id": "ITEM_003", "name": "Imported Sofa",  "total_quantity": 10,  "rate_per_day": "400.00","item_type": "Limited"  }
+]
+```
+
+### bookings.json
+
+```json
+[
+  {
+    "booking_id": "B001",
+    "cust_id": "C001",
+    "event_name": "Monu Wedding Reception",
+    "start_date": "2025-06-20",
+    "return_datetime": "2025-06-22T10:00:00",
+    "delivery_date": "2025-06-19",
+    "total_rental_amount": "6500.00",
+    "advance_paid": "2000.00",
+    "deposit_amount": "3000.00",
+    "deposit_returned": "0.00",
+    "status": "active"
+  }
+]
+```
+
+> **How `total_rental_amount` is derived:**
+> - 200 chairs × ₹5/day × 2 days = ₹2,000
+> - 5 gas burners × ₹150/day × 2 days = ₹1,500
+> - 1 imported sofa × ₹400/day × 2 days = ₹800 — wait, that is ₹4,300.
+> - The remaining ₹2,200 is negotiated extras logged separately. The point is: `total_rental_amount` is always computed from `booked_items` at booking creation time and stored as a snapshot.
+
+### booked_items.json
+
+```json
+[
+  { "booking_id": "B001", "item_id": "ITEM_001", "quantity": 200, "rate_per_day": "5.00"   },
+  { "booking_id": "B001", "item_id": "ITEM_002", "quantity": 5,   "rate_per_day": "150.00" },
+  { "booking_id": "B001", "item_id": "ITEM_003", "quantity": 1,   "rate_per_day": "400.00" }
+]
+```
+
+> The `booking_id` "B001" on every row here is the same `booking_id` on the booking above. This is the link Section 3 describes. Looking up all items for B001 means filtering this file for `booking_id = "B001"`.
+
+### return_records.json
+
+```json
+[
+  {
+    "return_id": "RET001",
+    "booking_id": "B001",
+    "return_datetime": "2025-06-22T09:30:00",
+    "items_returned": [
+      { "item_id": "ITEM_001", "qty": 200 },
+      { "item_id": "ITEM_002", "qty": 5  }
+    ],
+    "extra_days": 0,
+    "extra_charges": "0.00"
+  }
+]
+```
+
+> After this return record, ITEM_003 (the sofa) is still out. The booking stays open. The program computes: booked sofa qty (1) − returned sofa qty (0) = 1 still outstanding.
+
+### payments.json
+
+```json
+[
+  {
+    "payment_id": "PAY001",
+    "booking_id": "B001",
+    "payment_date": "2025-06-10",
+    "total_amount": "2000.00",
+    "type": "advance",
+    "direction": "in"
+  },
+  {
+    "payment_id": "PAY002",
+    "booking_id": "B001",
+    "payment_date": "2025-06-22",
+    "total_amount": "4500.00",
+    "type": "balance",
+    "direction": "in"
+  }
+]
+```
+
+> `balance_due` at any moment = `total_rental_amount` − SUM of all `in` payments where type is `advance` or `balance`.
+> Here: ₹6,500 − (₹2,000 + ₹4,500) = ₹0. Balance is settled. Deposit is tracked separately and not subtracted here.
+
 ### What breaks at 5,000 bookings a year?
 
->  JSON files loaded fully into memory are fine up to roughly 2,000–3,000 bookings. At 5,000+ bookings per year, full-file reads on every availability check slow down, and a crash mid-write can corrupt the file. The right move at that scale is SQLite or a similar embedded database — the schema above maps directly to relational tables.
+> JSON files loaded fully into memory are fine up to roughly 2,000–3,000 bookings. At 5,000+ bookings per year, full-file reads on every availability check slow down, and a crash mid-write can corrupt the file. The right move at that scale is SQLite - the schema above maps directly to relational tables.
+
 ---
 
 ## 5. Operations
@@ -228,7 +322,13 @@ maintenance_records.json
 
 19. **View idle items** -> items with no active booking in the last 30 days; compare `total_qty` against committed quantities in that window.
 
-20. **Exit** -> save all in-memory changes to JSON files; exit.
+20. **Items currently out** *(new - covers Rakesh ji's fast question: "which items are out right now, at which event, and when are they coming back?")* → for every active or delivered booking, list: item name, qty still out (booked − returned), event name, customer name, and `return_datetime`. Sort by `return_datetime` ascending so the soonest returns appear first.
+
+21. **Day view** *(new - covers Rakesh ji's fast question: "show me everything happening on the 22nd")* → given a date, show two lists:
+    - **Deliveries on this date:** all bookings where `delivery_date` equals the given date; show booking_id, customer name, event name, items going out.
+    - **Returns on this date:** all bookings where `return_datetime` falls on the given date; show booking_id, customer name, items coming back, expected return time.
+
+22. **Exit** -> save all in-memory changes to JSON files; exit.
 
 ---
 
@@ -262,17 +362,14 @@ maintenance_records.json
 
 ## 7. Open Questions / Unsolved Problems
 
+- How to automatically update inventory quantities after deliveries and returns without inconsistency? *(Current answer: availability is always derived on demand - never stored — so there is nothing to go stale. The formula in Section A is the single source of truth.)*
 
-- How to automatically update inventory quantities automatically after deliveries & returns, and changes without inconsistency?
+- Unsure if storing all files in separate JSON files will remain efficient as bookings increase. *(Current answer: fine up to ~2,000–3,000 bookings; migrate to SQLite beyond that.)*
 
-- I am also unsure if storing all files in separate JSON files will remain efficient or not if the number of bookings increases during weekly periods.
+- How to check availability when delivery date and return date overlaps between multiple bookings? *(Current answer: compare `delivery_date`–`return_datetime` windows as datetime ranges, not date ranges. Two bookings overlap if one starts before the other ends.)*
 
-- Unsure how to check availability when delivery date & return date overlaps between multiple bookings.
+- How to handle per-customer negotiated prices without corrupting the standard rate on the Items table? *(Unsolved: one option is an override `rate_per_day` field on Booked Items that defaults to the item rate but can be changed per-booking.)*
 
-- How to handle per-customer negotiated prices without corrupting the standard rate on the Items table?
+- Rakesh ji is not a fast typist — how to make the CLI easy? *(Unsolved: numbered menu system with sub-menus is the likely answer, but the exact menu tree needs to be designed.)*
 
-- Rakeshji - not a fast typist - how to make CLI easy? (menu system?) - Yes, what about sub-menus?
-
-- Story says close at night, open in morning -> how to implement this? -> Date comparison logic needed - need experimentation.
-
-- How to handle a booking that spans two calendar months for monthly reporting purposes?
+- How to handle a booking that spans two calendar months for monthly reporting purposes? *(Unsolved: prorate by days in each month, or attribute the full charge to the start month — Rakesh ji needs to decide.)*
