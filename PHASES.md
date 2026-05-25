@@ -36,7 +36,7 @@
 **The hard rule (overlap logic):**
 ```
 booking overlaps query IF
-  booking.start_date < query_end
+  booking.delivery_date < query_end
   AND booking.return_datetime > query_start
 ```
 This handles same-day morning-return / evening-booking correctly.
