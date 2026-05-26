@@ -1,27 +1,42 @@
-from items import add_item, list_items
+from items import add_item, list_items, update_item, delete_item
 
 
-while True:
+def menu():
 
-    print("""
+    while True:
+
+        print("""
 ====== SHARMA TENT HOUSE ======
 
 1. Add Item
 2. List Items
-3. Exit
+3. Update Item
+4. Delete Item
+5. Exit
+              
+===============================
 """)
 
-    choice = input("Enter your choice: ")
+        choice = input("Enter your choice: ")
 
-    if choice == "1":
-        add_item()
+        if choice == "1":
+            add_item()
 
-    elif choice == "2":
-        list_items()
+        elif choice == "2":
+            list_items()
 
-    elif choice == "3":
-        print("Program closed.")
-        break
+        elif choice == "3":
+            update_item()
 
-    else:
-        print("Invalid choice.")
+        elif choice == "4":
+            delete_item()
+
+        elif choice == "5":
+            print("Exiting program...")
+            break
+
+        else:
+            print("Invalid choice.")
+
+
+menu()
