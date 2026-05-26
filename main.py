@@ -1,23 +1,28 @@
-from items import add_item, list_items, update_item, delete_item
+from items import (
+    add_item,
+    list_items,
+    update_item,
+    delete_item
+)
 
 
-def menu():
+def main():
 
     while True:
 
         print("""
-====== SHARMA TENT HOUSE ======
+========== SHARMA TENT HOUSE ==========
 
 1. Add Item
 2. List Items
 3. Update Item
 4. Delete Item
 5. Exit
-              
-===============================
+
+=======================================
 """)
 
-        choice = input("Enter your choice: ")
+        choice = input("Enter your choice: ").strip()
 
         if choice == "1":
             add_item()
@@ -32,11 +37,12 @@ def menu():
             delete_item()
 
         elif choice == "5":
-            print("Exiting program...")
+            print("Program closed.")
             break
 
         else:
-            print("Invalid choice.")
+            print("Invalid choice. Try again.")
 
 
-menu()
+if __name__ == "__main__":
+    main()

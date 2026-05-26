@@ -1,24 +1,26 @@
 import json
 import os
 
-FILE_PATH = "data/items.json"
 
+def load_data(file_path):
 
-def load_items():
     # Create file if missing
-    if not os.path.exists(FILE_PATH):
-        with open(FILE_PATH, "w") as file:
+    if not os.path.exists(file_path):
+
+        with open(file_path, "w") as file:
             json.dump([], file)
 
     try:
-        with open(FILE_PATH, "r") as file:
+        with open(file_path, "r") as file:
             return json.load(file)
 
     except json.JSONDecodeError:
-        print("Error: items.json is corrupted.")
+
+        print(f"Error: {file_path} contains invalid JSON.")
         return []
 
 
-def save_items(items):
-    with open(FILE_PATH, "w") as file:
-        json.dump(items, file, indent=4)
+def save_data(file_path, data):
+
+    with open(file_path, "w") as file:
+        json.dump(data, file, indent=4)
