@@ -1,16 +1,8 @@
 [
     {
-        "item_id": "ITEM_003",
+        "item_id": "ITEM_006",
         "name": "Folding Chairs",
         "total_quantity": 100,
-        "rate_per_day": "50",
-        "item_type": "Quantity"
-    },
-    {
-        "item_id": "ITEM_004",
-        "name": "Tables",
-        "total_quantity": 500,
-        "rate_per_day": "50.00",
-        "item_type": "Quantity"
+        "rate": "100.00"
     }
 ]

@@ -11,12 +11,14 @@ def load_data(file_path):
             json.dump([], file)
 
     try:
+
         with open(file_path, "r") as file:
             return json.load(file)
 
     except json.JSONDecodeError:
 
         print(f"Error: {file_path} contains invalid JSON.")
+
         return []
 
 

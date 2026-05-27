@@ -6,35 +6,30 @@ ITEMS_FILE = "data/items.json"
 
 def generate_item_id(items):
 
-    # Find highest existing number
     highest = 0
 
     for item in items:
 
-        item_id = item["item_id"]
-
-        number = int(item_id.split("_")[1])
+        number = int(item["item_id"].split("_")[1])
 
         if number > highest:
             highest = number
 
-    next_number = highest + 1
-
-    return f"ITEM_{next_number:03}"
+    return f"ITEM_{highest + 1:03d}"
 
 
 def get_valid_quantity():
 
     while True:
 
-        quantity = input("Enter total quantity: ").strip()
+        quantity = input("Enter quantity: ").strip()
 
         if quantity == "":
             print("Quantity cannot be empty.")
             continue
 
         if not quantity.isdigit():
-            print("Quantity must be a positive number.")
+            print("Quantity must be a number.")
             continue
 
         quantity = int(quantity)
@@ -50,9 +45,7 @@ def get_valid_rate():
 
     while True:
 
-        rate = input(
-            "Enter rate per day (example 5.00): "
-        ).strip()
+        rate = input("Enter rate: ").strip()
 
         if rate == "":
             print("Rate cannot be empty.")
@@ -69,7 +62,48 @@ def get_valid_rate():
             return f"{value:.2f}"
 
         except ValueError:
-            print("Invalid rate. Enter valid number.")
+            print("Invalid rate.")
+
+
+def search_items(items, search_text):
+
+    matches = []
+
+    search_text = search_text.lower()
+
+    for item in items:
+
+        if search_text in item["name"].lower():
+            matches.append(item)
+
+    return matches
+
+
+def choose_item(matches):
+
+    if len(matches) == 1:
+        return matches[0]
+
+    print("\nMatching Items:\n")
+
+    for index, item in enumerate(matches, start=1):
+
+        print(f"{index}. {item['name']}")
+
+    while True:
+
+        choice = input(
+            "Choose item number: "
+        ).strip()
+
+        if choice.isdigit():
+
+            choice = int(choice)
+
+            if 1 <= choice <= len(matches):
+                return matches[choice - 1]
+
+        print("Invalid choice.")
 
 
 def add_item():
@@ -86,14 +120,11 @@ def add_item():
 
     rate = get_valid_rate()
 
-    item_type = input("Enter item type:(Quantity/Limited/Unique) ").strip()
-
     new_item = {
         "item_id": generate_item_id(items),
         "name": name,
         "total_quantity": quantity,
-        "rate_per_day": rate,
-        "item_type": item_type
+        "rate": rate
     }
 
     items.append(new_item)
@@ -111,17 +142,54 @@ def list_items():
         print("No items yet.")
         return
 
-    print("\n========== ITEM LIST ==========")
+    print("\n========== ITEMS ==========")
 
     for item in items:
 
         print(f"""
-Item ID       : {item['item_id']}
-Name          : {item['name']}
-Quantity      : {item['total_quantity']}
-Rate Per Day  : {item['rate_per_day']}
-Item Type     : {item['item_type']}
------------------------------------
+Item ID   : {item['item_id']}
+Name      : {item['name']}
+Quantity  : {item['total_quantity']}
+Rate      : {item['rate']}
+-----------------------------
+""")
+
+
+def search_item():
+
+    items = load_data(ITEMS_FILE)
+
+    if not items:
+        print("No items yet.")
+        return
+
+    search = input(
+        "Enter item name to search: "
+    ).strip()
+
+    matches = search_items(items, search)
+
+    if not matches:
+
+        print("\nNo matching items found.")
+
+        print("\nAvailable items:")
+
+        for item in items:
+            print("-", item["name"])
+
+        return
+
+    print("\n========== SEARCH RESULTS ==========")
+
+    for item in matches:
+
+        print(f"""
+Item ID   : {item['item_id']}
+Name      : {item['name']}
+Quantity  : {item['total_quantity']}
+Rate      : {item['rate']}
+-----------------------------
 """)
 
 
@@ -129,104 +197,111 @@ def update_item():
 
     items = load_data(ITEMS_FILE)
 
-    item_name = input(
-        "Enter item name to update: "
+    search = input(
+        "Enter item name to search: "
     ).strip()
 
-    for item in items:
+    matches = search_items(items, search)
 
-        if item["name"].lower() == item_name.lower():
+    if not matches:
 
-            print("\nLeave blank to keep old value.\n")
+        print("\nNo matching items found.")
 
-            new_name = input(
-                f"New name [{item['name']}]: "
-            ).strip()
+        print("\nAvailable items:")
 
-            new_quantity = input(
-                f"New quantity [{item['total_quantity']}]: "
-            ).strip()
+        for item in items:
+            print("-", item["name"])
 
-            new_rate = input(
-                f"New rate [{item['rate_per_day']}]: "
-            ).strip()
+        return
 
-            new_type = input(
-                f"New type [{item['item_type']}]: "
-            ).strip()
+    item = choose_item(matches)
 
-            if new_name:
-                item["name"] = new_name
+    print("\nLeave blank to keep old value.\n")
 
-            if new_quantity:
+    new_name = input(
+        f"New name [{item['name']}]: "
+    ).strip()
 
-                if new_quantity.isdigit():
+    new_quantity = input(
+        f"New quantity [{item['total_quantity']}]: "
+    ).strip()
 
-                    quantity = int(new_quantity)
+    new_rate = input(
+        f"New rate [{item['rate']}]: "
+    ).strip()
 
-                    if quantity >= 0:
-                        item["total_quantity"] = quantity
+    if new_name:
+        item["name"] = new_name
 
-                    else:
-                        print("Negative quantity not allowed.")
+    if new_quantity:
 
-                else:
-                    print("Invalid quantity. Old value kept.")
+        if new_quantity.isdigit():
 
-            if new_rate:
+            quantity = int(new_quantity)
 
-                try:
+            if quantity >= 0:
+                item["total_quantity"] = quantity
 
-                    rate = float(new_rate)
+            else:
+                print("Negative quantity not allowed.")
 
-                    if rate >= 0:
-                        item["rate_per_day"] = f"{rate:.2f}"
+        else:
+            print("Invalid quantity. Old value kept.")
 
-                    else:
-                        print("Negative rate not allowed.")
+    if new_rate:
 
-                except ValueError:
-                    print("Invalid rate. Old value kept.")
+        try:
 
-            if new_type:
-                item["item_type"] = new_type
+            rate = float(new_rate)
 
-            save_data(ITEMS_FILE, items)
+            if rate >= 0:
+                item["rate"] = f"{rate:.2f}"
 
-            print("Item updated successfully.")
+            else:
+                print("Negative rate not allowed.")
 
-            return
+        except ValueError:
+            print("Invalid rate. Old value kept.")
 
-    print("Item not found.")
+    save_data(ITEMS_FILE, items)
+
+    print("Item updated successfully.")
 
 
 def delete_item():
 
     items = load_data(ITEMS_FILE)
 
-    item_name = input(
-        "Enter item name to delete: "
+    search = input(
+        "Enter item name to search: "
     ).strip()
 
-    for item in items:
+    matches = search_items(items, search)
 
-        if item["name"].lower() == item_name.lower():
+    if not matches:
 
-            confirm = input(
-                f"Delete {item['name']}? (yes/no): "
-            ).strip().lower()
+        print("\nNo matching items found.")
 
-            if confirm == "yes":
+        print("\nAvailable items:")
 
-                items.remove(item)
+        for item in items:
+            print("-", item["name"])
 
-                save_data(ITEMS_FILE, items)
+        return
 
-                print("Item deleted successfully.")
+    item = choose_item(matches)
 
-            else:
-                print("Delete cancelled.")
+    confirm = input(
+        f"Delete {item['name']}? (yes/no): "
+    ).strip().lower()
 
-            return
+    if confirm == "yes":
 
-    print("Item not found.")
+        items.remove(item)
+
+        save_data(ITEMS_FILE, items)
+
+        print("Item deleted successfully.")
+
+    else:
+        print("Delete cancelled.")
