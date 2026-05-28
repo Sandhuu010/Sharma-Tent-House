@@ -4,6 +4,11 @@ from storage import load_data, save_data
 ITEMS_FILE = "data/items.json"
 
 
+def normalize_text(text):
+
+    return text.strip().lower()
+
+
 def generate_item_id(items):
 
     highest = 0
@@ -24,12 +29,8 @@ def get_valid_quantity():
 
         quantity = input("Enter quantity: ").strip()
 
-        if quantity == "":
-            print("Quantity cannot be empty.")
-            continue
-
         if not quantity.isdigit():
-            print("Quantity must be a number.")
+            print("Quantity must be a positive number.")
             continue
 
         quantity = int(quantity)
@@ -46,10 +47,6 @@ def get_valid_rate():
     while True:
 
         rate = input("Enter rate: ").strip()
-
-        if rate == "":
-            print("Rate cannot be empty.")
-            continue
 
         try:
 
@@ -69,11 +66,11 @@ def search_items(items, search_text):
 
     matches = []
 
-    search_text = search_text.lower()
+    search_text = normalize_text(search_text)
 
     for item in items:
 
-        if search_text in item["name"].lower():
+        if search_text in normalize_text(item["name"]):
             matches.append(item)
 
     return matches
@@ -88,7 +85,10 @@ def choose_item(matches):
 
     for index, item in enumerate(matches, start=1):
 
-        print(f"{index}. {item['name']}")
+        print(
+            f"{index}. {item['name']} "
+            f"({item['category']})"
+        )
 
     while True:
 
@@ -112,9 +112,18 @@ def add_item():
 
     name = input("Enter item name: ").strip()
 
-    if name == "":
-        print("Item name cannot be empty.")
-        return
+    normalized_name = normalize_text(name)
+
+    # Duplicate check
+    for item in items:
+
+        if normalize_text(item["name"]) == normalized_name:
+            print("Item already exists.")
+            return
+
+    category = input(
+        "Enter category (Chair/Table/etc): "
+    ).strip()
 
     quantity = get_valid_quantity()
 
@@ -123,6 +132,7 @@ def add_item():
     new_item = {
         "item_id": generate_item_id(items),
         "name": name,
+        "category": category,
         "total_quantity": quantity,
         "rate": rate
     }
@@ -131,31 +141,24 @@ def add_item():
 
     save_data(ITEMS_FILE, items)
 
-    print("Item added successfully.")
+    print(f"{name} added successfully.")
 
 
-def list_items():
-
-    items = load_data(ITEMS_FILE)
-
-    if not items:
-        print("No items yet.")
-        return
-
-    print("\n========== ITEMS ==========")
+def print_items(items):
 
     for item in items:
 
         print(f"""
 Item ID   : {item['item_id']}
 Name      : {item['name']}
+Category  : {item['category']}
 Quantity  : {item['total_quantity']}
 Rate      : {item['rate']}
------------------------------
+-----------------------------------
 """)
 
 
-def search_item():
+def view_items():
 
     items = load_data(ITEMS_FILE)
 
@@ -163,34 +166,53 @@ def search_item():
         print("No items yet.")
         return
 
-    search = input(
-        "Enter item name to search: "
-    ).strip()
+    print("""
+1. View All Items
+2. Search By Name
+3. Search By Category
+""")
 
-    matches = search_items(items, search)
+    choice = input("Enter choice: ").strip()
 
-    if not matches:
+    if choice == "1":
 
-        print("\nNo matching items found.")
+        print_items(items)
 
-        print("\nAvailable items:")
+    elif choice == "2":
+
+        search = input(
+            "Enter item name: "
+        ).strip()
+
+        matches = search_items(items, search)
+
+        if matches:
+            print_items(matches)
+
+        else:
+            print("No matching items found.")
+
+    elif choice == "3":
+
+        category = input(
+            "Enter category: "
+        ).strip().lower()
+
+        matches = []
 
         for item in items:
-            print("-", item["name"])
 
-        return
+            if normalize_text(item["category"]) == category:
+                matches.append(item)
 
-    print("\n========== SEARCH RESULTS ==========")
+        if matches:
+            print_items(matches)
 
-    for item in matches:
+        else:
+            print("No items found in this category.")
 
-        print(f"""
-Item ID   : {item['item_id']}
-Name      : {item['name']}
-Quantity  : {item['total_quantity']}
-Rate      : {item['rate']}
------------------------------
-""")
+    else:
+        print("Invalid choice.")
 
 
 def update_item():
@@ -204,14 +226,7 @@ def update_item():
     matches = search_items(items, search)
 
     if not matches:
-
-        print("\nNo matching items found.")
-
-        print("\nAvailable items:")
-
-        for item in items:
-            print("-", item["name"])
-
+        print("No matching items found.")
         return
 
     item = choose_item(matches)
@@ -220,6 +235,10 @@ def update_item():
 
     new_name = input(
         f"New name [{item['name']}]: "
+    ).strip()
+
+    new_category = input(
+        f"New category [{item['category']}]: "
     ).strip()
 
     new_quantity = input(
@@ -233,39 +252,23 @@ def update_item():
     if new_name:
         item["name"] = new_name
 
-    if new_quantity:
+    if new_category:
+        item["category"] = new_category
 
-        if new_quantity.isdigit():
-
-            quantity = int(new_quantity)
-
-            if quantity >= 0:
-                item["total_quantity"] = quantity
-
-            else:
-                print("Negative quantity not allowed.")
-
-        else:
-            print("Invalid quantity. Old value kept.")
+    if new_quantity.isdigit():
+        item["total_quantity"] = int(new_quantity)
 
     if new_rate:
 
         try:
-
-            rate = float(new_rate)
-
-            if rate >= 0:
-                item["rate"] = f"{rate:.2f}"
-
-            else:
-                print("Negative rate not allowed.")
+            item["rate"] = f"{float(new_rate):.2f}"
 
         except ValueError:
             print("Invalid rate. Old value kept.")
 
     save_data(ITEMS_FILE, items)
 
-    print("Item updated successfully.")
+    print(f"{item['name']} updated successfully.")
 
 
 def delete_item():
@@ -279,14 +282,7 @@ def delete_item():
     matches = search_items(items, search)
 
     if not matches:
-
-        print("\nNo matching items found.")
-
-        print("\nAvailable items:")
-
-        for item in items:
-            print("-", item["name"])
-
+        print("No matching items found.")
         return
 
     item = choose_item(matches)
@@ -297,11 +293,13 @@ def delete_item():
 
     if confirm == "yes":
 
+        item_name = item["name"]
+
         items.remove(item)
 
         save_data(ITEMS_FILE, items)
 
-        print("Item deleted successfully.")
+        print(f"{item_name} deleted successfully.")
 
     else:
         print("Delete cancelled.")

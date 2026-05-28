@@ -1,7 +1,6 @@
 from items import (
     add_item,
-    list_items,
-    search_item,
+    view_items,
     update_item,
     delete_item
 )
@@ -15,11 +14,10 @@ def main():
 ========== SHARMA TENT HOUSE ==========
 
 1. Add Item
-2. List Items
-3. Search Item
-4. Update Item
-5. Delete Item
-6. Exit
+2. View Items
+3. Update Item
+4. Delete Item
+5. Exit
 
 =======================================
 """)
@@ -30,23 +28,20 @@ def main():
             add_item()
 
         elif choice == "2":
-            list_items()
+            view_items()
 
         elif choice == "3":
-            search_item()
-
-        elif choice == "4":
             update_item()
 
-        elif choice == "5":
+        elif choice == "4":
             delete_item()
 
-        elif choice == "6":
+        elif choice == "5":
             print("Program closed.")
             break
 
         else:
-            print("Invalid choice. Try again.")
+            print("Invalid choice.")
 
 
 if __name__ == "__main__":
