@@ -9,6 +9,22 @@ def normalize_text(text):
     return text.strip().lower()
 
 
+def item_exists(items, item_name, exclude_item=None):
+
+    normalized_name = normalize_text(item_name)
+
+    for item in items:
+
+        # Ignore current item during update
+        if exclude_item == item:
+            continue
+
+        if normalize_text(item["name"]) == normalized_name:
+            return True
+
+    return False
+
+
 def generate_item_id(items):
 
     highest = 0
@@ -29,6 +45,10 @@ def get_valid_quantity():
 
         quantity = input("Enter quantity: ").strip()
 
+        if quantity == "":
+            print("Quantity cannot be empty.")
+            continue
+
         if not quantity.isdigit():
             print("Quantity must be a positive number.")
             continue
@@ -47,6 +67,10 @@ def get_valid_rate():
     while True:
 
         rate = input("Enter rate: ").strip()
+
+        if rate == "":
+            print("Rate cannot be empty.")
+            continue
 
         try:
 
@@ -114,16 +138,23 @@ def add_item():
 
     normalized_name = normalize_text(name)
 
-    # Duplicate check
-    for item in items:
+    # Empty name check
+    if normalized_name == "":
+        print("Item name cannot be empty.")
+        return
 
-        if normalize_text(item["name"]) == normalized_name:
-            print("Item already exists.")
-            return
+    # Duplicate check
+    if item_exists(items, name):
+        print("Item already exists.")
+        return
 
     category = input(
         "Enter category (Chair/Table/etc): "
     ).strip()
+
+    if category == "":
+        print("Category cannot be empty.")
+        return
 
     quantity = get_valid_quantity()
 
@@ -145,6 +176,8 @@ def add_item():
 
 
 def print_items(items):
+
+    print(f"\nTotal Items Found: {len(items)}")
 
     for item in items:
 
@@ -196,13 +229,16 @@ def view_items():
 
         category = input(
             "Enter category: "
-        ).strip().lower()
+        ).strip()
 
         matches = []
 
         for item in items:
 
-            if normalize_text(item["category"]) == category:
+            if normalize_text(
+                item["category"]
+            ) == normalize_text(category):
+
                 matches.append(item)
 
         if matches:
@@ -226,7 +262,14 @@ def update_item():
     matches = search_items(items, search)
 
     if not matches:
-        print("No matching items found.")
+
+        print("\nNo matching items found.")
+
+        print("\nAvailable items:")
+
+        for item in items:
+            print("-", item["name"])
+
         return
 
     item = choose_item(matches)
@@ -249,19 +292,58 @@ def update_item():
         f"New rate [{item['rate']}]: "
     ).strip()
 
+    # Name update validation
     if new_name:
-        item["name"] = new_name
 
+        normalized_name = normalize_text(new_name)
+
+        if normalized_name == "":
+            print("Item name cannot be empty.")
+
+        elif item_exists(
+            items,
+            new_name,
+            exclude_item=item
+        ):
+            print(
+                "Another item with this name already exists."
+            )
+
+        else:
+            item["name"] = new_name
+
+    # Category update
     if new_category:
         item["category"] = new_category
 
-    if new_quantity.isdigit():
-        item["total_quantity"] = int(new_quantity)
+    # Quantity update
+    if new_quantity:
 
+        if new_quantity.isdigit():
+
+            quantity = int(new_quantity)
+
+            if quantity >= 0:
+                item["total_quantity"] = quantity
+
+            else:
+                print("Negative quantity not allowed.")
+
+        else:
+            print("Invalid quantity. Old value kept.")
+
+    # Rate update
     if new_rate:
 
         try:
-            item["rate"] = f"{float(new_rate):.2f}"
+
+            rate = float(new_rate)
+
+            if rate >= 0:
+                item["rate"] = f"{rate:.2f}"
+
+            else:
+                print("Negative rate not allowed.")
 
         except ValueError:
             print("Invalid rate. Old value kept.")
@@ -282,7 +364,14 @@ def delete_item():
     matches = search_items(items, search)
 
     if not matches:
-        print("No matching items found.")
+
+        print("\nNo matching items found.")
+
+        print("\nAvailable items:")
+
+        for item in items:
+            print("-", item["name"])
+
         return
 
     item = choose_item(matches)

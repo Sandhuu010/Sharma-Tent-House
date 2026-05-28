@@ -10,7 +10,7 @@
         "item_id": "ITEM_002",
         "name": "Plastic Chairs",
         "category": "Chairs",
-        "total_quantity": 200,
-        "rate": "60.00"
+        "total_quantity": 100,
+        "rate": "50.00"
     }
 ]
