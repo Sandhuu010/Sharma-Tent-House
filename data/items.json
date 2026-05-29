@@ -1,0 +1,16 @@
+[
+    {
+        "item_id": "ITEM_001",
+        "name": "Folding Chairs",
+        "category": "Chairs",
+        "total_quantity": 100,
+        "rate": "50.00"
+    },
+    {
+        "item_id": "ITEM_002",
+        "name": "Plastic Chairs",
+        "category": "Chairs",
+        "total_quantity": 100,
+        "rate": "50.00"
+    }
+]
