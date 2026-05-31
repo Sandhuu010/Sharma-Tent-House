@@ -1,1 +1,46 @@
-[]
+[
+    {
+        "booking_id": "BOOK_001",
+        "cust_id": "CUST_002",
+        "status": "OPEN",
+        "start_date": "2026-06-03",
+        "return_datetime": "2026-06-10",
+        "total_rental_amount": "32500.00",
+        "advance": "10000.00",
+        "deposit": "2000.00",
+        "items": [
+            {
+                "item_id": "ITEM_001",
+                "quantity": 50,
+                "returned_qty": 0
+            },
+            {
+                "item_id": "ITEM_003",
+                "quantity": 300,
+                "returned_qty": 0
+            }
+        ]
+    },
+    {
+        "booking_id": "BOOK_002",
+        "cust_id": "CUST_003",
+        "status": "OPEN",
+        "start_date": "2026-06-15",
+        "return_datetime": "2026-06-20",
+        "total_rental_amount": "7500.00",
+        "advance": "2000.00",
+        "deposit": "1000.00",
+        "items": [
+            {
+                "item_id": "ITEM_001",
+                "quantity": 100,
+                "returned_qty": 0
+            },
+            {
+                "item_id": "ITEM_002",
+                "quantity": 50,
+                "returned_qty": 0
+            }
+        ]
+    }
+]

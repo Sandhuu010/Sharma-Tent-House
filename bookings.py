@@ -1,12 +1,19 @@
 from datetime import datetime
 
-from storage import (
-    load_data,
-    save_data
+from decimal import (
+    Decimal,
+    InvalidOperation
+)
+
+from storage import load_data, save_data
+
+from customers import (
+    get_or_create_customer
 )
 
 ITEMS_FILE = "data/items.json"
 BOOKINGS_FILE = "data/bookings.json"
+CUSTOMERS_FILE = "data/customers.json"
 
 
 def generate_booking_id(bookings):
@@ -15,20 +22,29 @@ def generate_booking_id(bookings):
 
     for booking in bookings:
 
-        number = int(
-            booking["booking_id"]
-            .split("_")[1]
-        )
+        try:
 
-        highest = max(
-            highest,
-            number
-        )
+            number = int(
+                booking["booking_id"]
+                .split("_")[1]
+            )
+
+            highest = max(
+                highest,
+                number
+            )
+
+        except (
+            KeyError,
+            ValueError,
+            IndexError
+        ):
+            pass
 
     return f"BOOK_{highest + 1:03d}"
 
 
-def parse_datetime(text):
+def get_datetime(text):
 
     formats = [
         "%Y-%m-%d",
@@ -38,6 +54,7 @@ def parse_datetime(text):
     for fmt in formats:
 
         try:
+
             return datetime.strptime(
                 text,
                 fmt
@@ -48,6 +65,31 @@ def parse_datetime(text):
 
     return None
 
+def get_money(prompt):
+
+    while True:
+
+        value = input(prompt).strip()
+
+        try:
+
+            amount = Decimal(value)
+
+            if amount < 0:
+
+                print(
+                    "Amount cannot be negative."
+                )
+
+                continue
+
+            return amount
+
+        except InvalidOperation:
+
+            print(
+                "Invalid amount."
+            )
 
 def booking_overlaps(
     booking_start,
@@ -57,23 +99,16 @@ def booking_overlaps(
 ):
 
     return (
-
         booking_start < query_end
-
         and
-
         booking_return > query_start
-
     )
 
+
 def get_available_quantity(
-
     item_id,
-
     query_start,
-
     query_end
-
 ):
 
     items = load_data(
@@ -84,51 +119,43 @@ def get_available_quantity(
         BOOKINGS_FILE
     )
 
-    total_quantity = 0
+    total_qty = 0
 
     for item in items:
 
         if item["item_id"] == item_id:
 
-            total_quantity = (
-                item["total_quantity"]
-            )
+            total_qty = item[
+                "total_quantity"
+            ]
 
             break
 
-    booked_quantity = 0
+    booked_qty = 0
 
     for booking in bookings:
 
-        booking_start = (
-            parse_datetime(
-                booking["start_date"]
-            )
+        booking_start = get_datetime(
+            booking["start_date"]
         )
 
-        booking_return = (
-            parse_datetime(
-                booking[
-                    "return_datetime"
-                ]
-            )
+        booking_return = get_datetime(
+            booking[
+                "return_datetime"
+            ]
         )
 
         if not booking_overlaps(
-
             booking_start,
-
             booking_return,
-
             query_start,
-
             query_end
-
         ):
-
             continue
 
-        for booked_item in booking["items"]:
+        for booked_item in booking[
+            "items"
+        ]:
 
             if (
                 booked_item["item_id"]
@@ -136,50 +163,97 @@ def get_available_quantity(
                 item_id
             ):
 
-                active_qty = (
-
+                booked_qty += (
                     booked_item[
                         "quantity"
                     ]
-
                     -
-
                     booked_item[
                         "returned_qty"
                     ]
-
                 )
 
-                booked_quantity += (
-                    active_qty
+    return total_qty - booked_qty
+
+def calculate_rental_total(
+    booking_items
+):
+
+    items = load_data(
+        ITEMS_FILE
+    )
+
+    total = Decimal("0.00")
+
+    for booked_item in booking_items:
+
+        for item in items:
+
+            if (
+                item["item_id"]
+                ==
+                booked_item["item_id"]
+            ):
+
+                rate = Decimal(
+                    item["rate"]
                 )
 
-    return (
-        total_quantity
-        -
-        booked_quantity
+                qty = Decimal(
+                    str(
+                        booked_item[
+                            "quantity"
+                        ]
+                    )
+                )
+
+                total += (
+                    rate * qty
+                )
+
+                break
+
+    return total
+
+def create_booking():
+
+    customer = (
+        get_or_create_customer()
     )
 
-def check_availability():
+    if not customer:
+        return
 
-    item_id = input(
-        "Item ID: "
-    ).strip()
-
-    start = input(
-        "Start Date [YYYY-MM-DD]: "
-    ).strip()
-
-    end = input(
-        "Return Date [YYYY-MM-DD HH:MM]: "
-    ).strip()
-
-    query_start = (
-        parse_datetime(start)
+    items = load_data(
+        ITEMS_FILE
     )
 
-    query_end = (
-        parse_datetime(end)
+    bookings = load_data(
+        BOOKINGS_FILE
+    )
+
+    if not items:
+
+        print(
+            "No items available."
+        )
+
+        return
+
+    start_date = input(
+        "Start date [YYYY-MM-DD]: "
+    ).strip()
+
+    return_date = input(
+        "Return date [YYYY-MM-DD HH:MM]: "
+    ).strip()
+
+    query_start = get_datetime(
+        start_date
+    )
+
+    query_end = get_datetime(
+        return_date
     )
 
     if (
@@ -188,153 +262,209 @@ def check_availability():
         not query_end
     ):
 
+        print("Invalid date.")
+        return
+
+    if query_end <= query_start:
+
         print(
-            "Invalid date."
+            "Return date must be after start date."
         )
 
         return
 
-    available = (
-        get_available_quantity(
-            item_id,
-            query_start,
-            query_end
+    booking_items = []
+
+    while True:
+
+        print(
+            "\nAvailable Items:\n"
+        )
+
+        for item in items:
+
+         print(
+        f"{item['item_id']} | "
+        f"{item['name']} | "
+        f"Qty: {item['total_quantity']} | "
+        f"Rate: ₹{item['rate']}"
+        )
+
+        item_id = input(
+            "\nEnter Item ID: "
+        ).strip()
+
+        selected_item = None
+
+        for item in items:
+
+            if (
+                item["item_id"]
+                ==
+                item_id
+            ):
+
+                selected_item = item
+                break
+
+        if not selected_item:
+
+            print(
+                "Invalid Item ID."
+            )
+
+            continue
+
+        quantity_text = input(
+            "Quantity: "
+        ).strip()
+
+        if (
+            not quantity_text.isdigit()
+            or
+            int(quantity_text) <= 0
+        ):
+
+            print(
+                "Invalid quantity."
+            )
+
+            continue
+
+        quantity = int(
+            quantity_text
+        )
+
+        available = (
+            get_available_quantity(
+                item_id,
+                query_start,
+                query_end
+            )
+        )
+
+        if quantity > available:
+
+            print(
+                f"Only {available} available."
+            )
+
+            continue
+
+        duplicate = False
+
+        for booked_item in booking_items:
+
+            if (
+                booked_item[
+                    "item_id"
+                ]
+                ==
+                item_id
+            ):
+
+                booked_item[
+                    "quantity"
+                ] += quantity
+
+                duplicate = True
+
+                break
+
+        if not duplicate:
+
+            booking_items.append(
+                {
+                    "item_id":
+                        item_id,
+
+                    "quantity":
+                        quantity,
+
+                    "returned_qty":
+                        0
+                }
+            )
+
+        choice = input(
+            "Add another item? (y/n): "
+        ).strip().lower()
+
+        if choice != "y":
+            break
+
+    if not booking_items:
+
+        print(
+            "No items added."
+        )
+
+        return
+
+    rental_total = (
+        calculate_rental_total(
+            booking_items
         )
     )
 
     print(
-        f"\nAvailable: "
-        f"{available}"
+        f"\nRental Total = "
+        f"₹{rental_total:.2f}"
     )
 
-def create_booking():
-
-    bookings = load_data(
-        BOOKINGS_FILE
+    advance = get_money(
+        "Advance Received: "
     )
 
-    customer_name = input(
-        "Customer Name: "
-    ).strip()
-
-    phone = input(
-        "Phone: "
-    ).strip()
-
-    address = input(
-        "Address: "
-    ).strip()
-
-    start_date = input(
-        "Start Date [YYYY-MM-DD]: "
-    ).strip()
-
-    return_datetime = input(
-        "Return Date [YYYY-MM-DD HH:MM]: "
-    ).strip()
-
-    item_id = input(
-        "Item ID: "
-    ).strip()
-
-    quantity = int(
-        input(
-            "Quantity: "
-        )
-    )
-
-    advance = input(
-        "Advance Amount: "
-    ).strip()
-
-    deposit = input(
-        "Deposit Amount: "
-    ).strip()
-
-    total_amount = input(
-        "Total Amount: "
-    ).strip()
-
-    query_start = (
-        parse_datetime(
-            start_date
-        )
-    )
-
-    query_end = (
-        parse_datetime(
-            return_datetime
-        )
-    )
-
-    available = (
-        get_available_quantity(
-            item_id,
-            query_start,
-            query_end
-        )
-    )
-
-    if quantity > available:
+    if advance > rental_total:
 
         print(
-            f"Only "
-            f"{available} "
-            f"available."
+            "Advance cannot exceed rental total."
         )
 
         return
 
+    deposit = get_money(
+        "Security Deposit: "
+    )
+
     booking = {
 
-        "booking_id":
-            generate_booking_id(
-                bookings
-            ),
+    "booking_id":
+        generate_booking_id(
+            bookings
+        ),
 
-        "customer_name":
-            customer_name,
+    "cust_id":
+        customer["cust_id"],
 
-        "phone":
-            phone,
+    "status":
+        "OPEN",
 
-        "address":
-            address,
+    "start_date":
+        start_date,
 
-        "start_date":
-            start_date,
+    "return_datetime":
+        return_date,
 
-        "return_datetime":
-            return_datetime,
+    "total_rental_amount":
+        f"{rental_total:.2f}",
 
-        "advance":
-            advance,
+    "advance":
+        f"{advance:.2f}",
 
-        "deposit":
-            deposit,
+    "deposit":
+        f"{deposit:.2f}",
 
-        "total_amount":
-            total_amount,
+    "damage_amount":
+        "0.00",
 
-        "items": [
+    "damage_settled":
+        True,
 
-            {
-
-                "item_id":
-                    item_id,
-
-                "quantity":
-                    quantity,
-
-                "returned_qty":
-                    0
-            }
-
-        ],
-
-        "status":
-            "ACTIVE"
-    }
+    "items":
+        booking_items
+}
 
     bookings.append(
         booking
@@ -346,8 +476,192 @@ def create_booking():
     )
 
     print(
-        "\nBooking created."
+        f"\n{booking['booking_id']} "
+        f"created successfully."
     )
+
+    print(
+        f"Customer : "
+        f"{customer['name']}"
+    )
+
+    print(
+        f"Rental Total : "
+        f"₹{rental_total:.2f}"
+    )
+
+    print(
+        f"Advance : "
+        f"₹{advance:.2f}"
+    )
+
+    print(
+        f"Deposit : "
+        f"₹{deposit:.2f}"
+    )
+
+
+def check_availability():
+
+    item_id = input(
+        "Enter Item ID: "
+    ).strip()
+
+    start_date = input(
+        "Start date [YYYY-MM-DD]: "
+    ).strip()
+
+    return_date = input(
+        "Return date [YYYY-MM-DD HH:MM]: "
+    ).strip()
+
+    query_start = get_datetime(
+        start_date
+    )
+
+    query_end = get_datetime(
+        return_date
+    )
+
+    if (
+        not query_start
+        or
+        not query_end
+    ):
+
+        print("Invalid date.")
+        return
+
+    available = (
+        get_available_quantity(
+            item_id,
+            query_start,
+            query_end
+        )
+    )
+
+    print(
+        f"Available Quantity: "
+        f"{available}"
+    )
+
+
+def mark_return():
+
+    bookings = load_data(
+        BOOKINGS_FILE
+    )
+
+    booking_id = input(
+        "Enter Booking ID: "
+    ).strip()
+
+    booking = None
+
+    for b in bookings:
+
+        if (
+            b["booking_id"]
+            ==
+            booking_id
+        ):
+
+            booking = b
+            break
+
+    if not booking:
+
+        print(
+            "Booking not found."
+        )
+
+        return
+
+    print("\nItems:\n")
+
+    for index, item in enumerate(
+        booking["items"],
+        start=1
+    ):
+
+        print(
+            f"{index}. "
+            f"{item['item_id']} "
+            f"(Booked: {item['quantity']}, "
+            f"Returned: {item['returned_qty']})"
+        )
+
+    choice = input(
+        "\nChoose item number: "
+    ).strip()
+
+    if not choice.isdigit():
+
+        print(
+            "Invalid choice."
+        )
+
+        return
+
+    choice = int(choice)
+
+    if not (
+        1 <= choice <= len(
+            booking["items"]
+        )
+    ):
+
+        print(
+            "Invalid choice."
+        )
+
+        return
+
+    item = booking[
+        "items"
+    ][choice - 1]
+
+    remaining = (
+        item["quantity"]
+        -
+        item["returned_qty"]
+    )
+
+    qty_text = input(
+        f"Return Quantity (Max {remaining}): "
+    ).strip()
+
+    if (
+        not qty_text.isdigit()
+    ):
+
+        print(
+            "Invalid quantity."
+        )
+
+        return
+
+    qty = int(qty_text)
+
+    if qty > remaining:
+
+        print(
+            "Return exceeds booked quantity."
+        )
+
+        return
+
+    item["returned_qty"] += qty
+
+    save_data(
+        BOOKINGS_FILE,
+        bookings
+    )
+
+    print(
+        "Return recorded."
+    )
+
 
 def list_bookings():
 
@@ -355,178 +669,125 @@ def list_bookings():
         BOOKINGS_FILE
     )
 
+    customers = load_data(
+        CUSTOMERS_FILE
+    )
+
     if not bookings:
 
         print(
-            "No bookings."
+            "No bookings yet."
         )
 
         return
 
     for booking in bookings:
 
-        print(f"""
-
-Booking ID :
-{booking['booking_id']}
-
-Customer :
-{booking['customer_name']}
-
-Phone :
-{booking['phone']}
-
-Start :
-{booking['start_date']}
-
-Return :
-{booking['return_datetime']}
-
-Advance :
-{booking['advance']}
-
-Deposit :
-{booking['deposit']}
-
-Total :
-{booking['total_amount']}
-
-Status :
-{booking['status']}
-
---------------------------------
-""")
-        
-def record_return():
-
-    bookings = load_data(
-        BOOKINGS_FILE
-    )
-
-    booking_id = input(
-        "Booking ID: "
-    )
-
-    for booking in bookings:
-
-        if (
-            booking["booking_id"]
-            ==
-            booking_id
-        ):
-
-            item = (
-                booking["items"][0]
-            )
-
-            remaining = (
-
-                item["quantity"]
-
-                -
-
-                item[
-                    "returned_qty"
-                ]
-            )
-
-            print(
-                f"Remaining: "
-                f"{remaining}"
-            )
-
-            qty = int(
-                input(
-                    "Return Qty: "
-                )
-            )
-
-            if qty > remaining:
-
-                print(
-                    "Too many."
-                )
-
-                return
-
-            item[
-                "returned_qty"
-            ] += qty
-
-            save_data(
-                BOOKINGS_FILE,
-                bookings
-            )
-
-            print(
-                "Return saved."
-            )
-
-            return
-
-    print(
-        "Booking not found."
-    )
-
-def customer_history():
-
-    bookings = load_data(
-        BOOKINGS_FILE
-    )
-
-    phone = input(
-        "Phone: "
-    )
-
-    found = False
-
-    for booking in bookings:
-
-        if (
-            booking["phone"]
-            ==
-            phone
-        ):
-
-            found = True
-
-            print(f"""
-
-Booking :
-{booking['booking_id']}
-
-Customer :
-{booking['customer_name']}
-
-Start :
-{booking['start_date']}
-
-Return :
-{booking['return_datetime']}
-
-Amount :
-{booking['total_amount']}
-
------------------------
-""")
-
-    if not found:
-
-        print(
-            "No history found."
+        customer_name = (
+            "Unknown Customer"
         )
 
-from decimal import Decimal
+        customer_phone = ""
 
+        if "cust_id" in booking:
 
-def booking_summary():
+            for customer in customers:
+
+                if (
+                    customer["cust_id"]
+                    ==
+                    booking["cust_id"]
+                ):
+
+                    customer_name = (
+                        customer["name"]
+                    )
+
+                    customer_phone = (
+                        customer["phone"]
+                    )
+
+                    break
+
+        print(
+            f"\nBooking ID : "
+            f"{booking['booking_id']}"
+        )
+
+        print(
+            f"Customer   : "
+            f"{customer_name}"
+        )
+
+        print(
+            f"Phone      : "
+            f"{customer_phone}"
+        )
+
+        print(
+            f"Status     : "
+            f"{booking.get('status', 'OPEN')}"
+        )
+        
+        print(
+            f"Rental Amt  : ₹"
+            f"{booking.get('total_rental_amount', '0.00')}"
+        )
+
+        print(
+            f"Advance     : ₹"
+            f"{booking.get('advance', '0.00')}"
+        )
+
+        print(
+            f"Deposit     : ₹"
+            f"{booking.get('deposit', '0.00')}"
+        )
+
+        print(
+            f"Damage Amt  : ₹"
+            f"{booking.get('damage_amount', '0.00')}"
+        )
+
+        print(
+            f"Damage Done : "
+            f"{booking.get('damage_settled', False)}"
+        )
+        print(
+            f"Start Date : "
+            f"{booking['start_date']}"
+        )
+
+        print(
+            f"Return Date: "
+            f"{booking['return_datetime']}"
+        )
+
+        print("\nItems:")
+
+        for item in booking["items"]:
+
+           pending = (
+             item["quantity"]
+             -
+             item["returned_qty"]
+           )
+
+           print(
+              f"{item['item_id']} "
+              f"| Qty: {item['quantity']} "
+              f"| Returned: {item['returned_qty']} "
+              f"| Pending: {pending}"
+           )
+
+        print("-" * 40)
+
+def get_booking_by_id(
+    booking_id
+):
 
     bookings = load_data(
         BOOKINGS_FILE
-    )
-
-    booking_id = input(
-        "Booking ID: "
     )
 
     for booking in bookings:
@@ -537,43 +798,62 @@ def booking_summary():
             booking_id
         ):
 
-            total = Decimal(
-                booking[
-                    "total_amount"
-                ]
+            return booking
+
+    return None
+
+def booking_fully_returned(
+    booking
+):
+
+    for item in booking["items"]:
+
+        if (
+            item["returned_qty"]
+            <
+            item["quantity"]
+        ):
+
+            return False
+
+    return True
+
+
+def get_pending_items(
+    booking
+):
+
+    pending = []
+
+    for item in booking["items"]:
+
+        remaining = (
+            item["quantity"]
+            -
+            item["returned_qty"]
+        )
+
+        if remaining > 0:
+
+            pending.append(
+                {
+                    "item_id":
+                        item["item_id"],
+
+                    "pending":
+                        remaining
+                }
             )
 
-            advance = Decimal(
-                booking[
-                    "advance"
-                ]
-            )
+    return pending
 
-            balance = (
-                total
-                -
-                advance
-            )
+def get_damage_amount(
+    booking
+):
 
-            print(f"""
-
-Customer :
-{booking['customer_name']}
-
-Total :
-₹{total}
-
-Advance :
-₹{advance}
-
-Balance :
-₹{balance}
-
-""")
-
-            return
-
-    print(
-        "Booking not found."
+    return Decimal(
+        booking.get(
+            "damage_amount",
+            "0.00"
+        )
     )
-
