@@ -4,7 +4,6 @@ import os
 
 def load_data(file_path):
 
-    # Create file if missing
     if not os.path.exists(file_path):
 
         with open(file_path, "w") as file:
@@ -17,7 +16,9 @@ def load_data(file_path):
 
     except json.JSONDecodeError:
 
-        print(f"Error: {file_path} contains invalid JSON.")
+        print(
+            f"\nError: {file_path} contains invalid JSON."
+        )
 
         return []
 
@@ -25,4 +26,8 @@ def load_data(file_path):
 def save_data(file_path, data):
 
     with open(file_path, "w") as file:
-        json.dump(data, file, indent=4)
+        json.dump(
+            data,
+            file,
+            indent=4
+        )
