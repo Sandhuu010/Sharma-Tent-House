@@ -24,8 +24,7 @@ from payments import (
 from delivery import (
     mark_delivery,
     record_return,
-    close_booking,
-    items_currently_out_report
+    close_booking
 )
 
 from damage import (
@@ -33,6 +32,13 @@ from damage import (
     damage_summary,
     settle_damage,
     view_damage_records
+)
+
+from maintenance import (
+    send_to_maintenance,
+    return_from_maintenance,
+    view_maintenance_records,
+    items_currently_out_report
 )
 
 
@@ -71,16 +77,22 @@ DELIVERY & RETURNS
 12. Mark Delivery
 13. Record Return
 14. Close Booking
-15. Items Currently Out Report
 
 DAMAGE MANAGEMENT
 
-16. Record Damage
-17. Damage Summary
-18. Settle Damage
-19. View Damage Records
+15. Record Damage
+16. Damage Summary
+17. Settle Damage
+18. View Damage Records
 
-20. Exit
+MAINTENANCE & REPORTS
+
+19. Send Item To Maintenance
+20. Return Item From Maintenance
+21. View Maintenance Records
+22. Items Currently Out Report
+
+23. Exit
 
 =======================================
 """)
@@ -147,25 +159,37 @@ DAMAGE MANAGEMENT
 
         elif choice == "15":
 
-            items_currently_out_report()
+            record_damage()
 
         elif choice == "16":
 
-            record_damage()
+            damage_summary()
 
         elif choice == "17":
 
-            damage_summary()
+            settle_damage()
 
         elif choice == "18":
 
-            settle_damage()
+            view_damage_records()
 
         elif choice == "19":
 
-            view_damage_records()
+            send_to_maintenance()
 
         elif choice == "20":
+
+            return_from_maintenance()
+
+        elif choice == "21":
+
+            view_maintenance_records()
+
+        elif choice == "22":
+
+            items_currently_out_report()
+
+        elif choice == "23":
 
             print(
                 "\nProgram closed."

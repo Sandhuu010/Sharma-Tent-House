@@ -11,6 +11,10 @@ from customers import (
     get_or_create_customer
 )
 
+from maintenance import (
+    get_maintenance_quantity
+)
+
 ITEMS_FILE = "data/items.json"
 BOOKINGS_FILE = "data/bookings.json"
 CUSTOMERS_FILE = "data/customers.json"
@@ -123,11 +127,15 @@ def get_available_quantity(
 
     for item in items:
 
-        if item["item_id"] == item_id:
+        if (
+            item["item_id"]
+            ==
+            item_id
+        ):
 
-            total_qty = item[
-                "total_quantity"
-            ]
+            total_qty = (
+                item["total_quantity"]
+            )
 
             break
 
@@ -140,9 +148,7 @@ def get_available_quantity(
         )
 
         booking_return = get_datetime(
-            booking[
-                "return_datetime"
-            ]
+            booking["return_datetime"]
         )
 
         if not booking_overlaps(
@@ -151,6 +157,7 @@ def get_available_quantity(
             query_start,
             query_end
         ):
+
             continue
 
         for booked_item in booking[
@@ -164,16 +171,41 @@ def get_available_quantity(
             ):
 
                 booked_qty += (
+
                     booked_item[
                         "quantity"
                     ]
+
                     -
+
                     booked_item[
                         "returned_qty"
                     ]
                 )
 
-    return total_qty - booked_qty
+    maintenance_qty = (
+        get_maintenance_quantity(
+            item_id
+        )
+    )
+
+    available = (
+
+        total_qty
+
+        -
+
+        booked_qty
+
+        -
+
+        maintenance_qty
+    )
+
+    return max(
+        0,
+        available
+    )
 
 def calculate_rental_total(
     booking_items
@@ -539,12 +571,21 @@ def check_availability():
             query_end
         )
     )
-
+    
+    maintenance_qty = (
+        get_maintenance_quantity(
+        item_id
+        )
+)
     print(
         f"Available Quantity: "
         f"{available}"
     )
-
+    
+    print(
+        f"Under Maintenance  : "
+        f"{maintenance_qty}"
+)
 
 def mark_return():
 
