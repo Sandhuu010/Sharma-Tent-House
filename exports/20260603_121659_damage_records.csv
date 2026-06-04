@@ -1,0 +1,2 @@
+damage_id,booking_id,item_id,quantity,damage_charge,notes
+DAM_001,BOOK_001,ITEM_001,3,500.00,Legs Broken

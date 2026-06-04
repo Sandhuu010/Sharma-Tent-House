@@ -1,4 +1,5 @@
 from storage import load_data, save_data
+from excel_export import export_to_excel
 
 CUSTOMERS_FILE = "data/customers.json"
 BOOKINGS_FILE = "data/bookings.json"
@@ -10,14 +11,60 @@ def generate_customer_id(customers):
 
     for customer in customers:
 
-        number = int(
-            customer["cust_id"].split("_")[1]
-        )
+        try:
 
-        highest = max(highest, number)
+            number = int(
+                customer["cust_id"]
+                .split("_")[1]
+            )
+
+            highest = max(
+                highest,
+                number
+            )
+
+        except (
+            KeyError,
+            ValueError,
+            IndexError
+        ):
+            pass
 
     return f"CUST_{highest + 1:03d}"
 
+def get_valid_phone():
+
+    while True:
+
+        phone = input(
+            "Phone Number: "
+        ).strip()
+
+        if not phone:
+
+            print(
+                "Phone number cannot be empty."
+            )
+
+            continue
+
+        if not phone.isdigit():
+
+            print(
+                "Phone number must contain digits only."
+            )
+
+            continue
+
+        if len(phone) != 10:
+
+            print(
+                "Phone number must be exactly 10 digits."
+            )
+
+            continue
+
+        return phone
 
 def search_customers(search_text):
 
@@ -27,19 +74,34 @@ def search_customers(search_text):
 
     matches = []
 
-    search_text = search_text.lower()
+    search_text = (
+        search_text
+        .strip()
+        .lower()
+    )
 
     for customer in customers:
 
         if (
-            search_text in customer["name"].lower()
+
+            search_text
+            in
+            customer["name"]
+            .lower()
+
             or
-            search_text in customer["phone"]
+
+            search_text
+            in
+            customer["phone"]
+
         ):
-            matches.append(customer)
+
+            matches.append(
+                customer
+            )
 
     return matches
-
 
 def choose_customer(matches):
 
@@ -69,24 +131,38 @@ def choose_customer(matches):
             "Invalid choice."
         )
 
-
 def add_customer():
 
     customers = load_data(
         CUSTOMERS_FILE
     )
 
-    name = input(
-        "Customer Name: "
-    ).strip()
+    while True:
 
-    phone = input(
-        "Phone Number: "
-    ).strip()
+        name = input(
+            "Customer Name: "
+        ).strip()
+
+        if name:
+            break
+
+        print(
+            "Customer name cannot be empty."
+        )
+
+    phone = get_valid_phone()
 
     address = input(
         "Address: "
     ).strip()
+
+    if not address:
+
+        print(
+            "Address cannot be empty."
+        )
+
+        return
 
     for customer in customers:
 
@@ -95,6 +171,7 @@ def add_customer():
             print(
                 "Customer already exists."
             )
+
             return
 
     customer = {
@@ -114,7 +191,9 @@ def add_customer():
             address
     }
 
-    customers.append(customer)
+    customers.append(
+        customer
+    )
 
     save_data(
         CUSTOMERS_FILE,
@@ -124,7 +203,6 @@ def add_customer():
     print(
         f"{name} added successfully."
     )
-
 
 def view_customers():
 
@@ -138,34 +216,17 @@ def view_customers():
 
     if not customers:
 
-        print("No customers yet.")
+        print(
+            "No customers found."
+        )
+
         return
+
+    rows = []
 
     for customer in customers:
 
-        print(
-            f"\nCustomer ID : "
-            f"{customer['cust_id']}"
-        )
-
-        print(
-            f"Name        : "
-            f"{customer['name']}"
-        )
-
-        print(
-            f"Phone       : "
-            f"{customer['phone']}"
-        )
-
-        print(
-            f"Address     : "
-            f"{customer['address']}"
-        )
-
-        print("\nBookings:")
-
-        found = False
+        booking_count = 0
 
         for booking in bookings:
 
@@ -175,17 +236,35 @@ def view_customers():
                 customer["cust_id"]
             ):
 
-                print(
-                    booking["booking_id"]
-                )
+                booking_count += 1
 
-                found = True
+        rows.append(
+            {
+                "Customer ID":
+                    customer["cust_id"],
 
-        if not found:
-            print("No bookings.")
+                "Name":
+                    customer["name"],
 
-        print("-" * 40)
+                "Phone":
+                    customer["phone"],
 
+                "Address":
+                    customer["address"],
+
+                "Total Bookings":
+                    booking_count
+            }
+        )
+
+    from excel_export import (
+        export_to_excel
+    )
+
+    export_to_excel(
+        "customers.xlsx",
+        rows
+    )
 
 def customer_history():
 
@@ -336,9 +415,7 @@ def get_or_create_customer():
 
     while True:
 
-        phone = input(
-            "Phone Number: "
-        ).strip()
+        phone = get_valid_phone()
 
         if not phone:
 
@@ -373,11 +450,14 @@ def get_or_create_customer():
             continue
 
         break
-
-    address = input(
+    while True:
+      address = input(
         "Address: "
     ).strip()
-
+      if address:
+          break
+      print("Address cannot be empty")
+      
     new_customer = {
 
         "cust_id":

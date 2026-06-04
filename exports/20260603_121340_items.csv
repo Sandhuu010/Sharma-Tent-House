@@ -1,0 +1,6 @@
+Item ID,Name,Category,Quantity,Rate
+ITEM_001,Plastic Chairs,Chairs,500,40.00
+ITEM_002,Folding Chairs,Chairs,500,100.00
+ITEM_003,Sofa,Chair,100,200.00
+ITEM_004,Plastic Tables,Tables,200,150.00
+ITEM_005,Wooden Table,Tables,300,200.00

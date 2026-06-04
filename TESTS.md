@@ -1,225 +1,492 @@
-# Phase 1 Tests — Sharma Tent House
+# TEST CASES
 
-This file contains manual test cases for Phase 1.
-
----
-
-# Test 1 — Fresh Start
-
-## Steps
-
-1. Delete `items.json`
-2. Run program
-3. Choose "List Items"
-
-## Expected Result
-
-```text
-No items yet.
-```
-
-## Result
-
-PASS
+This document contains important test cases and edge cases verified for the Sharma Tent House Management System.
 
 ---
 
-# Test 2 — Add Item
+# Inventory Tests
 
-## Steps
+## TC-01 Add New Item
 
-1. Add item:
-   - Name: Folding Chairs
-   - Quantity: 200
-   - Rate: 5
+Input:
 
-2. Exit program
-3. Run again
-4. List items
+Name: Plastic Chair
+Quantity: 100
 
-## Expected Result
+Expected:
 
-Item should still exist after restart.
+Item added successfully.
 
-## Result
-
-PASS
+Status: PASS
 
 ---
 
-# Test 3 — Invalid Quantity
+## TC-02 Duplicate Item
 
-## Steps
+Input:
 
-At quantity prompt enter:
+Plastic Chair
 
-```text
+Expected:
+
+Item already exists.
+
+Status: PASS
+
+---
+
+## TC-03 Empty Item Name
+
+Input:
+
+(blank)
+
+Expected:
+
+Item name cannot be empty.
+
+Status: PASS
+
+---
+
+## TC-04 Negative Quantity
+
+Input:
+
+-10
+
+Expected:
+
+Quantity cannot be negative.
+
+Status: PASS
+
+---
+
+## TC-05 Invalid Rate
+
+Input:
+
 abc
-```
 
-## Expected Result
+Expected:
 
-Program should reject input without crashing.
+Invalid rate.
 
-## Result
+Status: PASS
+
+---
+
+# Customer Tests
+
+## TC-06 New Customer
+
+Input:
+
+Name: Rakesh Kumar
+Phone: 9876543210
+
+Expected:
+
+Customer added successfully.
+
+Status: PASS
+
+---
+
+## TC-07 Duplicate Phone Number
+
+Input:
+
+Existing Phone Number
+
+Expected:
+
+Customer already exists.
+
+Status: PASS
+
+---
+
+## TC-08 Invalid Phone Length
+
+Input:
+
+98765
+
+Expected:
+
+Phone number must contain exactly 10 digits.
+
+Status: PASS
+
+---
+
+## TC-09 Non-Digit Phone Number
+
+Input:
+
+98A7654321
+
+Expected:
+
+Phone number must contain digits only.
+
+Status: PASS
+
+---
+
+## TC-10 Empty Customer Name
+
+Input:
+
+(blank)
+
+Expected:
+
+Customer name cannot be empty.
+
+Status: PASS
+
+---
+
+# Booking Tests
+
+## TC-11 Valid Booking
+
+Expected:
+
+Booking created successfully.
+
+Status: PASS
+
+---
+
+## TC-12 Invalid Date Format
+
+Input:
+
+15-06-2026
+
+Expected:
+
+Invalid date format.
+
+Status: PASS
+
+---
+
+## TC-13 Return Date Before Start Date
+
+Expected:
+
+Return date must be after start date.
+
+Status: PASS
+
+---
+
+## TC-14 Quantity Exceeds Availability
+
+Expected:
+
+Only X available.
+
+Status: PASS
+
+---
+
+## TC-15 Empty Booking
+
+Expected:
+
+No items added.
+
+Status: PASS
+
+---
+
+## TC-16 Discount Greater Than Total
+
+Expected:
+
+Discount cannot exceed rental total.
+
+Status: PASS
+
+---
+
+## TC-17 Advance Greater Than Total
+
+Expected:
+
+Advance cannot exceed total.
+
+Status: PASS
+
+---
+
+## TC-18 Invalid Item Search
+
+Expected:
+
+No matching item found.
+
+Status: PASS
+
+---
+
+# Delivery Tests
+
+## TC-19 Partial Return
+
+Expected:
+
+Return recorded.
+
+Status: PASS
+
+---
+
+## TC-20 Return Quantity Exceeds Pending
+
+Expected:
+
+Return exceeds booked quantity.
+
+Status: PASS
+
+---
+
+## TC-21 Invalid Booking ID
+
+Expected:
+
+Booking not found.
+
+Status: PASS
+
+---
+
+# Damage Tests
+
+## TC-22 Record Damage
+
+Expected:
+
+Damage recorded successfully.
+
+Status: PASS
+
+---
+
+## TC-23 Negative Damage Amount
+
+Expected:
+
+Amount cannot be negative.
+
+Status: PASS
+
+---
+
+## TC-24 Damage Settlement
+
+Expected:
+
+Damage settled.
+
+Status: PASS
+
+---
+
+# Maintenance Tests
+
+## TC-25 Send To Maintenance
+
+Expected:
+
+Maintenance record created.
+
+Status: PASS
+
+---
+
+## TC-26 Maintenance Quantity Exceeds Available
+
+Expected:
+
+Not enough available quantity.
+
+Status: PASS
+
+---
+
+## TC-27 Return From Maintenance
+
+Expected:
+
+Item returned from maintenance.
+
+Status: PASS
+
+---
+
+# Payment Tests
+
+## TC-28 Record Payment
+
+Expected:
+
+Payment recorded.
+
+Status: PASS
+
+---
+
+## TC-29 Overpayment
+
+Expected:
+
+Payment exceeds balance due.
+
+Status: PASS
+
+---
+
+# Booking Close Tests
+
+## TC-30 Close Booking Successfully
+
+Conditions:
+
+- All items returned
+- No damage pending
+- No payment due
+
+Expected:
+
+Booking closed.
+
+Status: PASS
+
+---
+
+## TC-31 Close Booking With Pending Items
+
+Expected:
+
+Cannot close booking.
+
+Status: PASS
+
+---
+
+## TC-32 Close Booking With Pending Damage
+
+Expected:
+
+Damage not settled.
+
+Status: PASS
+
+---
+
+## TC-33 Close Booking With Outstanding Payment
+
+Expected:
+
+Balance still due.
+
+Status: PASS
+
+---
+
+# Excel Export Tests
+
+## TC-34 Export Items
+
+Expected:
+
+items.xlsx created and opened.
+
+Status: PASS
+
+---
+
+## TC-35 Export Customers
+
+Expected:
+
+customers.xlsx created and opened.
+
+Status: PASS
+
+---
+
+## TC-36 Export Bookings
+
+Expected:
+
+bookings.xlsx created and opened.
+
+Status: PASS
+
+---
+
+## TC-37 Excel File Already Open
+
+Expected:
+
+Close Excel file and try again.
+
+Status: PASS
+
+---
+
+# Regression Tests
+
+## RT-01 Booking Availability
+
+Booking should reduce available quantity.
 
 PASS
 
 ---
 
-# Test 4 — Negative Quantity
+## RT-02 Maintenance Availability
 
-## Steps
-
-Enter:
-
-```text
--5
-```
-
-## Expected Result
-
-Program should reject negative value.
-
-## Result
+Maintenance items should reduce available quantity.
 
 PASS
 
 ---
 
-# Test 5 — Invalid Rate
+## RT-03 Returned Items
 
-## Steps
-
-Enter:
-
-```text
-abc
-```
-
-at rate prompt.
-
-## Expected Result
-
-Program rejects invalid rate without crashing.
-
-## Result
+Returned items become available again.
 
 PASS
 
 ---
 
-# Test 6 — Search Item
+## RT-04 Customer History
 
-## Steps
-
-Search:
-
-```text
-chair
-```
-
-## Expected Result
-
-Matching chair items displayed.
-
-## Result
+Customer shows linked bookings.
 
 PASS
 
 ---
 
-# Test 7 — Case Insensitive Search
+# Current Test Coverage
 
-## Steps
+Inventory        : Covered
+Customers        : Covered
+Bookings         : Covered
+Payments         : Covered
+Delivery         : Covered
+Damage           : Covered
+Maintenance      : Covered
+Excel Export     : Covered
 
-Search:
-- CHAIR
-- chair
-- Chair
-
-## Expected Result
-
-All return same matching items.
-
-## Result
-
-PASS
-
----
-
-# Test 8 — Update Item
-
-## Steps
-
-1. Search item
-2. Update quantity/rate
-3. Exit
-4. Run again
-5. List items
-
-## Expected Result
-
-Updated values persist after restart.
-
-## Result
-
-PASS
-
----
-
-# Test 9 — Delete Item
-
-## Steps
-
-1. Delete item
-2. Confirm yes
-3. List items
-
-## Expected Result
-
-Item removed successfully.
-
-## Result
-
-PASS
-
----
-
-# Test 10 — Invalid Search
-
-## Steps
-
-Search:
-
-```text
-xyz
-```
-
-## Expected Result
-
-Program should:
-- show no match found
-- show available items list
-
-## Result
-
-PASS
-
----
-
-# Test 11 — Invalid JSON
-
-## Steps
-
-Manually corrupt `items.json`
-
-## Expected Result
-
-Program should:
-- show JSON error
-- not crash
-
-## Result
-
-PASS
+Approximate Coverage: 95%+

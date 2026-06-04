@@ -1,23 +1,44 @@
 [
     {
         "item_id": "ITEM_001",
-        "name": "Folding Chairs",
+        "name": "Plastic Chairs",
         "category": "Chairs",
-        "total_quantity": 100,
-        "rate": "50.00"
+        "total_quantity": 500,
+        "rate": "40.00"
     },
     {
         "item_id": "ITEM_002",
-        "name": "Plastic Chairs",
+        "name": "Folding Chairs",
         "category": "Chairs",
-        "total_quantity": 100,
-        "rate": "50.00"
+        "total_quantity": 500,
+        "rate": "100.00"
     },
     {
         "item_id": "ITEM_003",
         "name": "Sofa",
         "category": "Chair",
+        "total_quantity": 100,
+        "rate": "200.00"
+    },
+    {
+        "item_id": "ITEM_004",
+        "name": "Plastic Tables",
+        "category": "Tables",
+        "total_quantity": 200,
+        "rate": "150.00"
+    },
+    {
+        "item_id": "ITEM_005",
+        "name": "Wooden Table",
+        "category": "Tables",
+        "total_quantity": 300,
+        "rate": "200.00"
+    },
+    {
+        "item_id": "ITEM_006",
+        "name": "Flowers",
+        "category": "Decoration",
         "total_quantity": 600,
-        "rate": "100.00"
+        "rate": "20.00"
     }
 ]

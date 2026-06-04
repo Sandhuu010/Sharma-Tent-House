@@ -1,0 +1,2 @@
+Booking ID,Customer,Phone,Occasion,Status,Rental Amount,Start,Return,Items
+BOOK_001,Mohit,9999999999,Birthday,DAMAGE_PENDING,7400,15-06-2026 10:00,17-06-2026 17:00,"ITEM_001 (150), ITEM_004 (10)"
