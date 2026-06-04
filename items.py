@@ -1,5 +1,7 @@
 from storage import load_data, save_data
-
+from excel_export import (
+    export_to_excel
+)
 
 ITEMS_FILE = "data/items.json"
 
@@ -31,10 +33,24 @@ def generate_item_id(items):
 
     for item in items:
 
-        number = int(item["item_id"].split("_")[1])
+        try:
 
-        if number > highest:
-            highest = number
+            number = int(
+                item["item_id"]
+                .split("_")[1]
+            )
+
+            highest = max(
+                highest,
+                number
+            )
+
+        except (
+            KeyError,
+            ValueError,
+            IndexError
+        ):
+            continue
 
     return f"ITEM_{highest + 1:03d}"
 
@@ -43,33 +59,52 @@ def get_valid_quantity():
 
     while True:
 
-        quantity = input("Enter quantity: ").strip()
+        quantity = input(
+            "Enter quantity: "
+        ).strip()
 
         if quantity == "":
-            print("Quantity cannot be empty.")
+
+            print(
+                "Quantity cannot be empty."
+            )
+
             continue
 
         if not quantity.isdigit():
-            print("Quantity must be a positive number.")
+
+            print(
+                "Quantity must be a whole positive number."
+            )
+
             continue
 
         quantity = int(quantity)
 
-        if quantity < 0:
-            print("Quantity cannot be negative.")
+        if quantity <= 0:
+
+            print(
+                "Quantity must be greater than 0."
+            )
+
             continue
 
         return quantity
-
 
 def get_valid_rate():
 
     while True:
 
-        rate = input("Enter rate: ").strip()
+        rate = input(
+            "Enter rate: "
+        ).strip()
 
         if rate == "":
-            print("Rate cannot be empty.")
+
+            print(
+                "Rate cannot be empty."
+            )
+
             continue
 
         try:
@@ -77,13 +112,28 @@ def get_valid_rate():
             value = float(rate)
 
             if value < 0:
-                print("Rate cannot be negative.")
+
+                print(
+                    "Rate cannot be negative."
+                )
+
+                continue
+
+            if value > 1000000:
+
+                print(
+                    "Rate too large."
+                )
+
                 continue
 
             return f"{value:.2f}"
 
         except ValueError:
-            print("Invalid rate.")
+
+            print(
+                "Invalid rate."
+            )
 
 
 def search_items(items, search_text):
@@ -129,31 +179,53 @@ def choose_item(matches):
 
         print("Invalid choice.")
 
-
 def add_item():
 
-    items = load_data(ITEMS_FILE)
+    items = load_data(
+        ITEMS_FILE
+    )
 
-    name = input("Enter item name: ").strip()
+    name = input(
+        "Enter item name: "
+    ).strip()
 
-    normalized_name = normalize_text(name)
+    if not name:
 
-    # Empty name check
-    if normalized_name == "":
-        print("Item name cannot be empty.")
+        print(
+            "Item name cannot be empty."
+        )
+
         return
 
-    # Duplicate check
-    if item_exists(items, name):
-        print("Item already exists.")
+    if len(name) > 100:
+
+        print(
+            "Item name too long."
+        )
+
+        return
+
+    if item_exists(
+        items,
+        name
+    ):
+
+        print(
+            "Item already exists."
+        )
+
         return
 
     category = input(
-        "Enter category (Chair/Table/etc): "
+        "Enter category: "
     ).strip()
 
-    if category == "":
-        print("Category cannot be empty.")
+    if not category:
+
+        print(
+            "Category cannot be empty."
+        )
+
         return
 
     quantity = get_valid_quantity()
@@ -161,42 +233,80 @@ def add_item():
     rate = get_valid_rate()
 
     new_item = {
-        "item_id": generate_item_id(items),
-        "name": name,
-        "category": category,
-        "total_quantity": quantity,
-        "rate": rate
+
+        "item_id":
+            generate_item_id(
+                items
+            ),
+
+        "name":
+            name,
+
+        "category":
+            category,
+
+        "total_quantity":
+            quantity,
+
+        "rate":
+            rate
     }
 
-    items.append(new_item)
+    items.append(
+        new_item
+    )
 
-    save_data(ITEMS_FILE, items)
+    save_data(
+        ITEMS_FILE,
+        items
+    )
 
-    print(f"{name} added successfully.")
-
+    print(
+        f"{name} added successfully."
+    )
 
 def print_items(items):
 
-    print(f"\nTotal Items Found: {len(items)}")
+    rows = []
 
     for item in items:
 
-        print(f"""
-Item ID   : {item['item_id']}
-Name      : {item['name']}
-Category  : {item['category']}
-Quantity  : {item['total_quantity']}
-Rate      : {item['rate']}
------------------------------------
-""")
+        rows.append(
+            {
+                "Item ID":
+                    item["item_id"],
 
+                "Name":
+                    item["name"],
+
+                "Category":
+                    item["category"],
+
+                "Quantity":
+                    item["total_quantity"],
+
+                "Rate":
+                    item["rate"]
+            }
+        )
+
+    export_to_excel(
+        "items.xlsx",
+        rows
+    )
 
 def view_items():
 
-    items = load_data(ITEMS_FILE)
+    items = load_data(
+        ITEMS_FILE
+    )
 
     if not items:
-        print("No items yet.")
+
+        print(
+            "No items yet."
+        )
+
         return
 
     print("""
@@ -205,11 +315,15 @@ def view_items():
 3. Search By Category
 """)
 
-    choice = input("Enter choice: ").strip()
+    choice = input(
+        "Enter choice: "
+    ).strip()
 
     if choice == "1":
 
-        print_items(items)
+        print_items(
+            items
+        )
 
     elif choice == "2":
 
@@ -217,13 +331,46 @@ def view_items():
             "Enter item name: "
         ).strip()
 
-        matches = search_items(items, search)
+        matches = search_items(
+            items,
+            search
+        )
 
-        if matches:
-            print_items(matches)
+        if not matches:
 
-        else:
-            print("No matching items found.")
+            print(
+                "No matching items found."
+            )
+
+            return
+
+        rows = []
+
+        for item in matches:
+
+            rows.append(
+                {
+                    "Item ID":
+                        item["item_id"],
+
+                    "Name":
+                        item["name"],
+
+                    "Category":
+                        item["category"],
+
+                    "Quantity":
+                        item["total_quantity"],
+
+                    "Rate":
+                        item["rate"]
+                }
+            )
+
+        export_to_excel(
+            f"search_{search}.xlsx",
+            rows
+        )
 
     elif choice == "3":
 
@@ -235,46 +382,103 @@ def view_items():
 
         for item in items:
 
-            if normalize_text(
-                item["category"]
-            ) == normalize_text(category):
+            if (
+                normalize_text(
+                    item["category"]
+                )
+                ==
+                normalize_text(
+                    category
+                )
+            ):
 
-                matches.append(item)
+                matches.append(
+                    item
+                )
 
-        if matches:
-            print_items(matches)
+        if not matches:
 
-        else:
-            print("No items found in this category.")
+            print(
+                "No items found."
+            )
+
+            return
+
+        rows = []
+
+        for item in matches:
+
+            rows.append(
+                {
+                    "Item ID":
+                        item["item_id"],
+
+                    "Name":
+                        item["name"],
+
+                    "Category":
+                        item["category"],
+
+                    "Quantity":
+                        item["total_quantity"],
+
+                    "Rate":
+                        item["rate"]
+                }
+            )
+
+        export_to_excel(
+            f"category_{category}.xlsx",
+            rows
+        )
 
     else:
-        print("Invalid choice.")
 
+        print(
+            "Invalid choice."
+        )
 
 def update_item():
 
-    items = load_data(ITEMS_FILE)
+    items = load_data(
+        ITEMS_FILE
+    )
 
     search = input(
         "Enter item name to search: "
     ).strip()
 
-    matches = search_items(items, search)
+    matches = search_items(
+        items,
+        search
+    )
 
     if not matches:
 
-        print("\nNo matching items found.")
+        print(
+            "\nNo matching items found."
+        )
 
-        print("\nAvailable items:")
+        print(
+            "\nAvailable items:"
+        )
 
         for item in items:
-            print("-", item["name"])
+
+            print(
+                "-",
+                item["name"]
+            )
 
         return
 
-    item = choose_item(matches)
+    item = choose_item(
+        matches
+    )
 
-    print("\nLeave blank to keep old value.\n")
+    print(
+        "\nLeave blank to keep old value.\n"
+    )
 
     new_name = input(
         f"New name [{item['name']}]: "
@@ -292,103 +496,172 @@ def update_item():
         f"New rate [{item['rate']}]: "
     ).strip()
 
-    # Name update validation
+    # Name update
+
     if new_name:
 
-        normalized_name = normalize_text(new_name)
+        if len(new_name) > 100:
 
-        if normalized_name == "":
-            print("Item name cannot be empty.")
+            print(
+                "Item name too long."
+            )
 
         elif item_exists(
             items,
             new_name,
             exclude_item=item
         ):
+
             print(
                 "Another item with this name already exists."
             )
 
         else:
+
             item["name"] = new_name
 
     # Category update
+
     if new_category:
-        item["category"] = new_category
 
-    # Quantity update
-    if new_quantity:
+        if len(new_category) > 50:
 
-        if new_quantity.isdigit():
-
-            quantity = int(new_quantity)
-
-            if quantity >= 0:
-                item["total_quantity"] = quantity
-
-            else:
-                print("Negative quantity not allowed.")
+            print(
+                "Category too long."
+            )
 
         else:
-            print("Invalid quantity. Old value kept.")
+
+            item["category"] = new_category
+
+    # Quantity update
+
+    if new_quantity:
+
+        if not new_quantity.isdigit():
+
+            print(
+                "Invalid quantity."
+            )
+
+        else:
+
+            quantity = int(
+                new_quantity
+            )
+
+            if quantity <= 0:
+
+                print(
+                    "Quantity must be greater than 0."
+                )
+
+            else:
+
+                item[
+                    "total_quantity"
+                ] = quantity
 
     # Rate update
+
     if new_rate:
 
         try:
 
-            rate = float(new_rate)
+            rate = float(
+                new_rate
+            )
 
-            if rate >= 0:
-                item["rate"] = f"{rate:.2f}"
+            if rate < 0:
+
+                print(
+                    "Rate cannot be negative."
+                )
 
             else:
-                print("Negative rate not allowed.")
+
+                item[
+                    "rate"
+                ] = f"{rate:.2f}"
 
         except ValueError:
-            print("Invalid rate. Old value kept.")
 
-    save_data(ITEMS_FILE, items)
+            print(
+                "Invalid rate."
+            )
 
-    print(f"{item['name']} updated successfully.")
+    save_data(
+        ITEMS_FILE,
+        items
+    )
 
+    print(
+        f"{item['name']} updated successfully."
+    )
 
 def delete_item():
 
-    items = load_data(ITEMS_FILE)
+    items = load_data(
+        ITEMS_FILE
+    )
 
     search = input(
         "Enter item name to search: "
     ).strip()
 
-    matches = search_items(items, search)
+    matches = search_items(
+        items,
+        search
+    )
 
     if not matches:
 
-        print("\nNo matching items found.")
+        print(
+            "\nNo matching items found."
+        )
 
-        print("\nAvailable items:")
+        print(
+            "\nAvailable items:"
+        )
 
         for item in items:
-            print("-", item["name"])
+
+            print(
+                "-",
+                item["name"]
+            )
 
         return
 
-    item = choose_item(matches)
+    item = choose_item(
+        matches
+    )
 
     confirm = input(
         f"Delete {item['name']}? (yes/no): "
     ).strip().lower()
 
-    if confirm == "yes":
+    if confirm != "yes":
 
-        item_name = item["name"]
+        print(
+            "Delete cancelled."
+        )
 
-        items.remove(item)
+        return
 
-        save_data(ITEMS_FILE, items)
+    item_name = item[
+        "name"
+    ]
 
-        print(f"{item_name} deleted successfully.")
+    items.remove(
+        item
+    )
 
-    else:
-        print("Delete cancelled.")
+    save_data(
+        ITEMS_FILE,
+        items
+    )
+
+    print(
+        f"{item_name} deleted successfully."
+    )

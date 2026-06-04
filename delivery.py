@@ -23,9 +23,7 @@ PAYMENTS_FILE = (
 )
 
 
-def generate_delivery_id(
-    records
-):
+def generate_delivery_id(records):
 
     highest = 0
 
@@ -43,7 +41,11 @@ def generate_delivery_id(
                 number
             )
 
-        except:
+        except (
+            KeyError,
+            ValueError,
+            IndexError
+        ):
             pass
 
     return (
@@ -51,9 +53,7 @@ def generate_delivery_id(
     )
 
 
-def generate_return_id(
-    records
-):
+def generate_return_id(records):
 
     highest = 0
 
@@ -71,13 +71,16 @@ def generate_return_id(
                 number
             )
 
-        except:
+        except (
+            KeyError,
+            ValueError,
+            IndexError
+        ):
             pass
 
     return (
         f"RET_{highest + 1:03d}"
     )
-
 
 def get_booking(
     booking_id
@@ -98,7 +101,6 @@ def get_booking(
             return booking
 
     return None
-
 
 def get_balance_due(
     booking
@@ -134,12 +136,22 @@ def get_balance_due(
         booking["advance"]
     )
 
-    return (
+    balance = (
+
         total_amount
+
         -
+
         advance
+
         -
+
         total_paid
+    )
+
+    return max(
+        Decimal("0.00"),
+        balance
     )
 
 
@@ -156,6 +168,14 @@ def mark_delivery():
     booking_id = input(
         "Booking ID: "
     ).strip()
+
+    if booking_id == "":
+
+        print(
+            "Booking ID cannot be empty."
+        )
+
+        return
 
     booking = None
 
@@ -198,6 +218,29 @@ def mark_delivery():
 
         print(
             "Booking already closed."
+        )
+
+        return
+
+    try:
+
+        booking_start = datetime.strptime(
+            booking["start_date"],
+            "%Y-%m-%d %H:%M"
+        )
+
+    except ValueError:
+
+        print(
+            "Invalid booking start date."
+        )
+
+        return
+
+    if datetime.now() < booking_start:
+
+        print(
+            "Booking start time has not arrived yet."
         )
 
         return
@@ -248,7 +291,6 @@ def mark_delivery():
         "Delivery recorded."
     )
 
-
 def record_return():
 
     bookings = load_data(
@@ -262,6 +304,14 @@ def record_return():
     booking_id = input(
         "Booking ID: "
     ).strip()
+
+    if booking_id == "":
+
+        print(
+            "Booking ID cannot be empty."
+        )
+
+        return
 
     booking = None
 
@@ -284,11 +334,15 @@ def record_return():
 
         return
 
-    if (
-        booking["status"]
-        ==
-        "CLOSED"
-    ):
+    if booking["status"] == "OPEN":
+
+        print(
+            "Items have not been delivered yet."
+        )
+
+        return
+
+    if booking["status"] == "CLOSED":
 
         print(
             "Booking already closed."
@@ -298,8 +352,32 @@ def record_return():
 
     print("\nItems:\n")
 
+    available_items = []
+
+    for item in booking["items"]:
+
+        pending = (
+            item["quantity"]
+            -
+            item["returned_qty"]
+        )
+
+        if pending > 0:
+
+            available_items.append(
+                item
+            )
+
+    if not available_items:
+
+        print(
+            "All items already returned."
+        )
+
+        return
+
     for index, item in enumerate(
-        booking["items"],
+        available_items,
         start=1
     ):
 
@@ -331,7 +409,7 @@ def record_return():
 
     if not (
         1 <= choice <= len(
-            booking["items"]
+            available_items
         )
     ):
 
@@ -341,9 +419,9 @@ def record_return():
 
         return
 
-    item = booking[
-        "items"
-    ][choice - 1]
+    item = available_items[
+        choice - 1
+    ]
 
     remaining = (
         item["quantity"]
@@ -355,9 +433,7 @@ def record_return():
         f"Return Qty (Max {remaining}): "
     ).strip()
 
-    if (
-        not qty_text.isdigit()
-    ):
+    if not qty_text.isdigit():
 
         print(
             "Invalid quantity."
@@ -459,6 +535,7 @@ def record_return():
         "Return recorded."
     )
 
+
 def close_booking():
 
     bookings = load_data(
@@ -468,6 +545,14 @@ def close_booking():
     booking_id = input(
         "Booking ID: "
     ).strip()
+
+    if booking_id == "":
+
+        print(
+            "Booking ID cannot be empty."
+        )
+
+        return
 
     booking = None
 
@@ -502,7 +587,13 @@ def close_booking():
 
         return
 
-    # Check pending returns
+    if booking["status"] == "OPEN":
+
+        print(
+            "Booking not delivered yet."
+        )
+
+        return
 
     for item in booking["items"]:
 
@@ -526,15 +617,15 @@ def close_booking():
 
             return
 
-    # Check payment balance
-
     balance_due = (
         get_balance_due(
             booking
         )
     )
 
-    if balance_due > 0:
+    if balance_due > Decimal(
+        "0.00"
+    ):
 
         print(
             f"Balance Due: "
@@ -546,8 +637,6 @@ def close_booking():
         )
 
         return
-
-    # Check damage settlement
 
     damage_amount = Decimal(
         booking.get(
@@ -579,8 +668,6 @@ def close_booking():
 
         return
 
-    # Close booking
-
     booking["status"] = (
         "CLOSED"
     )
@@ -593,7 +680,6 @@ def close_booking():
     print(
         "\nBooking closed successfully."
     )
-
 
 def items_currently_out_report():
 

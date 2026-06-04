@@ -1,48 +1,66 @@
 [
     {
         "booking_id": "BOOK_001",
-        "cust_id": "CUST_001",
-        "status": "OPEN",
-        "start_date": "2026-06-02",
-        "return_datetime": "2026-06-10",
-        "total_rental_amount": "22500.00",
-        "advance": "1000.00",
+        "cust_id": "CUST_003",
+        "occasion": "Birthday",
+        "status": "DAMAGE_PENDING",
+        "start_date": "2026-06-15 10:00",
+        "return_datetime": "2026-06-17 17:00",
+        "discount": "100.00",
+        "total_rental_amount": "7400.00",
+        "advance": "1500.00",
         "deposit": "1000.00",
-        "damage_amount": "0.00",
+        "damage_amount": "500.00",
         "damage_settled": true,
         "items": [
             {
-                "item_id": "ITEM_003",
-                "quantity": 200,
-                "returned_qty": 0
+                "item_id": "ITEM_001",
+                "quantity": 150,
+                "returned_qty": 120
             },
             {
-                "item_id": "ITEM_001",
-                "quantity": 50,
+                "item_id": "ITEM_004",
+                "quantity": 10,
                 "returned_qty": 0
             }
         ]
     },
     {
         "booking_id": "BOOK_002",
-        "cust_id": "CUST_002",
+        "cust_id": "CUST_005",
+        "occasion": "Birthday",
         "status": "OPEN",
-        "start_date": "2026-06-15",
-        "return_datetime": "2026-06-20 15:00",
-        "total_rental_amount": "20500.00",
-        "advance": "1000.00",
+        "start_date": "2026-06-22 11:00",
+        "return_datetime": "2026-06-24 19:00",
+        "discount": "400.00",
+        "total_rental_amount": "9000.00",
+        "advance": "2000.00",
         "deposit": "1000.00",
         "damage_amount": "0.00",
         "damage_settled": true,
         "items": [
             {
                 "item_id": "ITEM_003",
-                "quantity": 200,
+                "item_name": "Sofa",
+                "quantity": 10,
                 "returned_qty": 0
             },
             {
-                "item_id": "ITEM_001",
-                "quantity": 10,
+                "item_id": "ITEM_006",
+                "item_name": "Flowers",
+                "quantity": 100,
+                "returned_qty": 0
+            },
+            {
+                "item_id": "ITEM_005",
+                "item_name": "Wooden Table",
+                "quantity": 2,
+                "returned_qty": 0
+            },
+            {
+                "item_id": "ITEM_002",
+                "item_name": "Folding Chairs",
+                "quantity": 50,
                 "returned_qty": 0
             }
         ]

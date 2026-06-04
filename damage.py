@@ -8,6 +8,8 @@ from storage import (
     save_data
 )
 
+from excel_export import export_to_excel
+
 DAMAGE_FILE = (
     "data/damage_records.json"
 )
@@ -94,6 +96,30 @@ def get_item_name(
 
     return item_id
 
+def get_already_damaged_qty(
+    booking_id,
+    item_id
+):
+
+    damage_records = load_data(
+        DAMAGE_FILE
+    )
+
+    total = 0
+
+    for record in damage_records:
+
+        if (
+            record["booking_id"]
+            == booking_id
+            and
+            record["item_id"]
+            == item_id
+        ):
+
+            total += record["quantity"]
+
+    return total
 
 def get_money(
     prompt
@@ -148,33 +174,28 @@ def record_damage():
 
     for b in bookings:
 
-        if (
-            b["booking_id"]
-            ==
-            booking_id
-        ):
+        if b["booking_id"] == booking_id:
 
             booking = b
             break
 
     if not booking:
 
-        print(
-            "Booking not found."
-        )
-
+        print("Booking not found.")
         return
 
-    if (
-        booking.get(
-            "status"
-        )
-        ==
-        "CLOSED"
+    if booking.get("status") == "CLOSED":
+
+        print("Booking already closed.")
+        return
+
+    if booking.get(
+        "damage_settled",
+        False
     ):
 
         print(
-            "Booking already closed."
+            "Damage already settled."
         )
 
         return
@@ -190,19 +211,33 @@ def record_damage():
             item["item_id"]
         )
 
-        print(
-            f"{index}. "
-            f"{item_name}"
+        already_damaged = (
+            get_already_damaged_qty(
+                booking_id,
+                item["item_id"]
+            )
+        )
+
+        available_damage = (
+            item["returned_qty"]
+            -
+            already_damaged
         )
 
         print(
-            f"   Booked   : "
-            f"{item['quantity']}"
+            f"{index}. {item_name}"
         )
 
         print(
-            f"   Returned : "
-            f"{item['returned_qty']}"
+            f"   Returned : {item['returned_qty']}"
+        )
+
+        print(
+            f"   Already Damaged : {already_damaged}"
+        )
+
+        print(
+            f"   Remaining Damage Qty : {available_damage}"
         )
 
         print()
@@ -213,10 +248,7 @@ def record_damage():
 
     if not choice.isdigit():
 
-        print(
-            "Invalid choice."
-        )
-
+        print("Invalid choice.")
         return
 
     choice = int(choice)
@@ -227,38 +259,44 @@ def record_damage():
         )
     ):
 
-        print(
-            "Invalid choice."
-        )
-
+        print("Invalid choice.")
         return
 
-    item = booking[
-        "items"
-    ][choice - 1]
+    item = booking["items"][
+        choice - 1
+    ]
+
+    already_damaged = (
+        get_already_damaged_qty(
+            booking_id,
+            item["item_id"]
+        )
+    )
 
     max_qty = (
         item["returned_qty"]
+        -
+        already_damaged
     )
 
-    qty_text = input(
-        f"Damaged Quantity "
-        f"(Max {max_qty}): "
-    ).strip()
-
-    if (
-        not qty_text.isdigit()
-    ):
+    if max_qty <= 0:
 
         print(
-            "Invalid quantity."
+            "No quantity available for damage entry."
         )
 
         return
 
-    qty = int(
-        qty_text
-    )
+    qty_text = input(
+        f"Damaged Quantity (Max {max_qty}): "
+    ).strip()
+
+    if not qty_text.isdigit():
+
+        print("Invalid quantity.")
+        return
+
+    qty = int(qty_text)
 
     if qty <= 0:
 
@@ -271,7 +309,7 @@ def record_damage():
     if qty > max_qty:
 
         print(
-            "Damage quantity exceeds returned quantity."
+            "Damage quantity exceeds allowed limit."
         )
 
         return
@@ -279,6 +317,14 @@ def record_damage():
     charge = get_money(
         "Damage Charge: "
     )
+
+    if charge <= 0:
+
+        print(
+            "Damage charge must be greater than zero."
+        )
+
+        return
 
     notes = input(
         "Notes: "
@@ -328,6 +374,10 @@ def record_damage():
         "DAMAGE_PENDING"
     )
 
+    booking[
+        "damage_settled"
+    ] = False
+
     save_data(
         DAMAGE_FILE,
         damage_records
@@ -341,7 +391,6 @@ def record_damage():
     print(
         "Damage recorded successfully."
     )
-
 
 def damage_summary():
 
@@ -431,19 +480,23 @@ def settle_damage():
 
     for b in bookings:
 
-        if (
-            b["booking_id"]
-            ==
-            booking_id
-        ):
+        if b["booking_id"] == booking_id:
 
             booking = b
             break
 
     if not booking:
 
+        print("Booking not found.")
+        return
+
+    if booking.get(
+        "damage_settled",
+        False
+    ):
+
         print(
-            "Booking not found."
+            "Damage already settled."
         )
 
         return
@@ -464,10 +517,6 @@ def settle_damage():
 
     if damage == 0:
 
-        print(
-            "No damage recorded."
-        )
-
         booking[
             "damage_settled"
         ] = True
@@ -479,8 +528,7 @@ def settle_damage():
         )
 
         print(
-            f"Refund customer: "
-            f"₹{refund:.2f}"
+            f"Refund customer: ₹{refund:.2f}"
         )
 
         confirm = input(
@@ -488,6 +536,7 @@ def settle_damage():
         ).strip().lower()
 
         if confirm != "y":
+
             return
 
         booking[
@@ -501,8 +550,7 @@ def settle_damage():
         )
 
         print(
-            f"Collect extra: "
-            f"₹{extra_due:.2f}"
+            f"Collect extra: ₹{extra_due:.2f}"
         )
 
         confirm = input(
@@ -510,6 +558,7 @@ def settle_damage():
         ).strip().lower()
 
         if confirm != "y":
+
             return
 
         booking[
@@ -525,14 +574,13 @@ def settle_damage():
         "Damage settlement completed."
     )
 
-
 def view_damage_records():
 
-    records = load_data(
+    damages = load_data(
         DAMAGE_FILE
     )
 
-    if not records:
+    if not damages:
 
         print(
             "No damage records."
@@ -540,42 +588,28 @@ def view_damage_records():
 
         return
 
-    print(
-        "\n===== DAMAGE RECORDS =====\n"
+    rows = []
+
+    for damage in damages:
+
+        rows.append([
+            damage["damage_id"],
+            damage["booking_id"],
+            damage["item_id"],
+            damage["quantity"],
+            damage["damage_charge"],
+            damage["notes"]
+        ])
+
+    export_to_excel(
+        "damage_records.xlsx",
+        [
+            "Damage ID",
+            "Booking ID",
+            "Item ID",
+            "Quantity",
+            "Damage Charge",
+            "Notes"
+        ],
+        rows
     )
-
-    for record in records:
-
-        print(
-            f"Damage ID : "
-            f"{record['damage_id']}"
-        )
-
-        print(
-            f"Booking   : "
-            f"{record['booking_id']}"
-        )
-
-        print(
-            f"Item      : "
-            f"{get_item_name(record['item_id'])}"
-        )
-
-        print(
-            f"Qty       : "
-            f"{record['quantity']}"
-        )
-
-        print(
-            f"Charge    : ₹"
-            f"{record['damage_charge']}"
-        )
-
-        print(
-            f"Notes     : "
-            f"{record['notes']}"
-        )
-
-        print(
-            "-" * 40
-        )

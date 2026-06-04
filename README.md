@@ -1,155 +1,168 @@
-# Sharma Tent House CLI System — Phase 1
+# Sharma Tent House Management System
 
-## Overview
-
-This is a CLI-based inventory management system for Sharma Tent House.
-
-Phase 1 implements the Item Catalogue system where users can:
-
-- Add items
-- List items
-- Search items
-- Update items
-- Delete items
-
-Data is stored permanently in a JSON file.
+A Python-based inventory and booking management system developed for tent house businesses to manage items, customers, bookings, deliveries, returns, payments, damages, and maintenance records.
 
 ---
 
 # Features
 
-## Add Item
-Add new inventory items with:
-- Auto-generated item ID
-- Name
-- Quantity
-- Rate
+## Inventory Management
 
-Example:
-
-```text
-ITEM_001
-Folding Chairs
-200
-5.00
-```
+- Add Item
+- View Items
+- Search Item by Name
+- Search Item by Category
+- Update Item
+- Delete Item
+- Duplicate Item Prevention
 
 ---
 
-## List Items
+## Customer Management
 
-Displays all stored items.
-
----
-
-## Search Item
-
-Search items using:
-- partial names
-- uppercase/lowercase insensitive matching
-
-Example:
-- chair
-- CHAIR
-- folding
-
-All work correctly.
+- Add Customer
+- Search Customer by Name
+- Search Customer by Phone Number
+- Customer Booking History
+- Duplicate Customer Detection
 
 ---
 
-## Update Item
+## Booking Management
 
-- Search item by partial name
-- Choose matching item
-- Blank input keeps old value
+- Check Availability
+- Create Booking
+- Multi-Item Booking
+- Customer Linking
+- Occasion Tracking
+- Discount Support
+- Advance Payment Tracking
+- Security Deposit Tracking
+- Booking Summary
 
 ---
 
-## Delete Item
+## Delivery & Returns
 
-- Search item by partial name
-- Shows matching items
-- Confirmation before delete
+- Mark Delivery
+- Record Partial Return
+- Record Full Return
+- Track Pending Items
+- Close Booking
+
+---
+
+## Payment Management
+
+- Record Payment
+- Advance Payments
+- Balance Due Calculation
+- Booking Financial Summary
+
+---
+
+## Damage Management
+
+- Record Damage
+- Damage Summary
+- Damage Settlement
+- View Damage Records
+
+---
+
+## Maintenance Management
+
+- Send Item To Maintenance
+- Return Item From Maintenance
+- Maintenance Records
+- Currently Out Items Report
+
+---
+
+## Excel Reports
+
+System exports reports directly to Excel:
+
+- Items Report
+- Customer Report
+- Booking Report
+- Damage Report
+- Maintenance Report
+- Items Currently Out Report
 
 ---
 
 # Project Structure
 
-```text
-SharmaTentHouse/
+```
+Sharma-Tent-House/
 │
 ├── main.py
-├── items.py
 ├── storage.py
-├── README.md
-├── TESTS.md
-├── .gitignore
+├── items.py
+├── customers.py
+├── bookings.py
+├── payments.py
+├── delivery.py
+├── damage.py
+├── maintenance.py
+├── export_utils.py
 │
-└── data/
-    └── items.json
+├── data/
+│   ├── items.json
+│   ├── customers.json
+│   ├── bookings.json
+│   ├── damages.json
+│   └── maintenance.json
+│
+└── reports/
 ```
 
 ---
 
-# Data Storage
+# Installation
 
-All items are stored in:
+## Clone Repository
 
-```text
-data/items.json
-```
-
-Example:
-
-```json
-[
-    {
-        "item_id": "ITEM_001",
-        "name": "Folding Chairs",
-        "total_quantity": 200,
-        "rate": "5.00"
-    }
-]
+```bash
+git clone <repository-url>
 ```
 
 ---
 
-# Validation
+## Create Virtual Environment
 
-The program prevents:
-- empty names
-- invalid quantity
-- negative quantity
-- invalid rate
-- negative rate
-
-The program never crashes on invalid user input.
-
----
-
-# Auto Item IDs
-
-IDs are automatically generated:
-
-```text
-ITEM_001
-ITEM_002
-ITEM_003
+```bash
+python -m venv venv
 ```
 
-Deleted IDs are not reused.
+---
+
+## Activate Virtual Environment
+
+### Windows
+
+```bash
+venv\Scripts\activate
+```
+
+### Linux/Mac
+
+```bash
+source venv/bin/activate
+```
 
 ---
 
-# Requirements
+## Install Dependencies
 
-- Python 3.x
+```bash
+pip install openpyxl
+```
 
 ---
 
-# How To Run
-
-Open terminal in project folder:
+# Run Application
 
 ```bash
 python main.py
@@ -157,15 +170,43 @@ python main.py
 
 ---
 
-# Future Scope
+# Booking Workflow
 
-Upcoming phases will include:
-- bookings
-- availability engine
-- customers
-- payments
-- delivery & return tracking
-- reports
-- maintenance management
+1. Create/Select Customer
+2. Enter Booking Dates
+3. Enter Occasion
+4. Search Items
+5. Add Quantities
+6. Apply Discount
+7. Receive Advance
+8. Receive Deposit
+9. Generate Booking
 
 ---
+
+# Technologies Used
+
+- Python
+- JSON Storage
+- OpenPyXL
+- Decimal Module
+
+---
+
+# Future Improvements
+
+- Invoice Generation
+- PDF Receipts
+- WhatsApp Integration
+- SMS Notifications
+- Cloud Database
+- Multi-User Login
+- Dashboard Analytics
+
+---
+
+# Developed For
+
+Sharma Tent House
+
+Inventory & Event Rental Management Solution

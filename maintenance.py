@@ -4,6 +4,7 @@ from storage import (
     load_data,
     save_data
 )
+from excel_export import export_to_excel
 
 ITEMS_FILE = "data/items.json"
 BOOKINGS_FILE = "data/bookings.json"
@@ -87,7 +88,6 @@ def get_customer_name(
 
     return "Unknown"
 
-
 def get_maintenance_quantity(
     item_id
 ):
@@ -101,142 +101,161 @@ def get_maintenance_quantity(
     for record in records:
 
         if (
-            record["item_id"]
+            record.get("item_id")
             ==
             item_id
             and
-            record["status"]
+            record.get("status")
             ==
             "UNDER_MAINTENANCE"
         ):
 
-            total += (
-                record["quantity"]
+            total += int(
+                record.get(
+                    "quantity",
+                    0
+                )
             )
 
     return total
 
+def search_item_for_maintenance(items):
+
+    while True:
+
+        search = input(
+            "\nSearch Item Name: "
+        ).strip().lower()
+
+        matches = []
+
+        for item in items:
+
+            if search in item["name"].lower():
+
+                matches.append(item)
+
+        if not matches:
+
+            print(
+                "No matching items found."
+            )
+
+            continue
+
+        print("\nMatching Items:\n")
+
+        for index, item in enumerate(
+            matches,
+            start=1
+        ):
+
+            print(
+                f"{index}. {item['item_id']} | {item['name']}"
+            )
+
+        choice = input(
+            "\nSelect Item Number: "
+        ).strip()
+
+        if (
+            choice.isdigit()
+            and 1 <= int(choice) <= len(matches)
+        ):
+
+            return matches[int(choice) - 1]
+
+        print("Invalid choice.")
+
 
 def send_to_maintenance():
 
-    items = load_data(
-        ITEMS_FILE
-    )
-
-    records = load_data(
-        MAINTENANCE_FILE
-    )
+    items = load_data(ITEMS_FILE)
+    records = load_data(MAINTENANCE_FILE)
+    bookings = load_data(BOOKINGS_FILE)
 
     if not items:
 
-        print(
-            "No items available."
-        )
-
+        print("No items available.")
         return
 
-    print("\nAvailable Items:\n")
+    # 🔥 NEW: SEARCH instead of listing all items
+    selected_item = search_item_for_maintenance(items)
 
-    for item in items:
-
-        print(
-            f"{item['item_id']} "
-            f"- "
-            f"{item['name']}"
-        )
-
-    item_id = input(
-        "\nItem ID: "
-    ).strip()
-
-    selected_item = None
-
-    for item in items:
-
-        if (
-            item["item_id"]
-            ==
-            item_id
-        ):
-
-            selected_item = item
-            break
-
-    if not selected_item:
-
-        print(
-            "Item not found."
-        )
-
-        return
+    item_id = selected_item["item_id"]
 
     qty_text = input(
         "Quantity: "
     ).strip()
 
-    if not qty_text.isdigit():
+    if (
+        not qty_text.isdigit()
+        or int(qty_text) <= 0
+    ):
 
-        print(
-            "Invalid quantity."
-        )
-
+        print("Invalid quantity.")
         return
 
-    quantity = int(
-        qty_text
+    quantity = int(qty_text)
+
+    total_qty = selected_item["total_quantity"]
+
+    booked_qty = 0
+
+    for booking in bookings:
+
+        for booked_item in booking["items"]:
+
+            if booked_item["item_id"] == item_id:
+
+                booked_qty += (
+                    booked_item["quantity"]
+                    - booked_item.get("returned_qty", 0)
+                )
+
+    already_under_maintenance = get_maintenance_quantity(item_id)
+
+    available = (
+        total_qty
+        - booked_qty
+        - already_under_maintenance
     )
 
-    if quantity <= 0:
+    if quantity > available:
 
         print(
-            "Quantity must be positive."
+            f"Only {available} item(s) available to send for maintenance."
         )
 
         return
 
-    reason = input(
-        "Reason: "
-    ).strip()
+    reason = input("Reason: ").strip()
+
+    if not reason:
+
+        print("Reason cannot be empty.")
+        return
 
     record = {
 
-        "maintenance_id":
-            generate_maintenance_id(
-                records
-            ),
+        "maintenance_id": generate_maintenance_id(records),
 
-        "item_id":
-            item_id,
+        "item_id": item_id,
 
-        "quantity":
-            quantity,
+        "quantity": quantity,
 
-        "reason":
-            reason,
+        "reason": reason,
 
-        "sent_date":
-            datetime.now()
-            .strftime(
-                "%Y-%m-%d"
-            ),
+        "sent_date": datetime.now().strftime("%Y-%m-%d"),
 
-        "status":
-            "UNDER_MAINTENANCE"
+        "status": "UNDER_MAINTENANCE"
     }
 
-    records.append(
-        record
-    )
+    records.append(record)
 
-    save_data(
-        MAINTENANCE_FILE,
-        records
-    )
+    save_data(MAINTENANCE_FILE, records)
 
-    print(
-        "\nItem sent to maintenance."
-    )
-
+    print("\nItem sent to maintenance successfully.")
 
 def return_from_maintenance():
 
@@ -249,7 +268,7 @@ def return_from_maintenance():
     for record in records:
 
         if (
-            record["status"]
+            record.get("status")
             ==
             "UNDER_MAINTENANCE"
         ):
@@ -327,6 +346,18 @@ def return_from_maintenance():
         choice - 1
     ]
 
+    if (
+        record["status"]
+        ==
+        "RETURNED"
+    ):
+
+        print(
+            "Already returned."
+        )
+
+        return
+
     record["status"] = (
         "RETURNED"
     )
@@ -346,7 +377,6 @@ def return_from_maintenance():
         "Item returned from maintenance."
     )
 
-
 def view_maintenance_records():
 
     records = load_data(
@@ -361,56 +391,44 @@ def view_maintenance_records():
 
         return
 
-    print(
-        "\n===== MAINTENANCE RECORDS =====\n"
-    )
+    rows = []
 
     for record in records:
 
-        print(
-            f"Maintenance ID : "
-            f"{record['maintenance_id']}"
-        )
-
-        print(
-            f"Item           : "
-            f"{get_item_name(record['item_id'])}"
-        )
-
-        print(
-            f"Quantity       : "
-            f"{record['quantity']}"
-        )
-
-        print(
-            f"Reason         : "
-            f"{record['reason']}"
-        )
-
-        print(
-            f"Status         : "
-            f"{record['status']}"
-        )
-
-        print(
-            f"Sent Date      : "
-            f"{record['sent_date']}"
-        )
-
-        if (
-            "returned_date"
-            in record
-        ):
-
-            print(
-                f"Returned Date  : "
-                f"{record['returned_date']}"
+        rows.append([
+            record.get(
+                "maintenance_id",
+                ""
+            ),
+            get_item_name(
+                record["item_id"]
+            ),
+            record["quantity"],
+            record["reason"],
+            record["status"],
+            record.get(
+                "sent_date",
+                ""
+            ),
+            record.get(
+                "returned_date",
+                ""
             )
+        ])
 
-        print(
-            "-" * 40
-        )
-
+    export_to_excel(
+        "maintenance.xlsx",
+        [
+            "Maintenance ID",
+            "Item",
+            "Quantity",
+            "Reason",
+            "Status",
+            "Sent Date",
+            "Returned Date"
+        ],
+        rows
+    )
 
 def items_currently_out_report():
 
@@ -418,75 +436,77 @@ def items_currently_out_report():
         BOOKINGS_FILE
     )
 
-    active = []
+    customers = load_data(
+        CUSTOMERS_FILE
+    )
+
+    rows = []
 
     for booking in bookings:
 
         if (
             booking.get("status")
-            != "CLOSED"
+            ==
+            "CLOSED"
         ):
 
-            active.append(
-                booking
-            )
+            continue
 
-    active.sort(
-        key=lambda booking:
-        booking["return_datetime"]
-    )
+        customer_name = ""
 
-    if not active:
+        for customer in customers:
 
-        print(
-            "No active bookings."
-        )
+            if (
+                customer["cust_id"]
+                ==
+                booking["cust_id"]
+            ):
 
-        return
+                customer_name = (
+                    customer["name"]
+                )
 
-    print(
-        "\n===== ITEMS CURRENTLY OUT =====\n"
-    )
-
-    for booking in active:
-
-        print(
-            f"Booking : "
-            f"{booking['booking_id']}"
-        )
-
-        print(
-            f"Customer: "
-            f"{get_customer_name(
-                booking['cust_id']
-            )}"
-        )
-
-        print(
-            f"Return  : "
-            f"{booking['return_datetime']}"
-        )
-
-        print(
-            "\nItems:"
-        )
+                break
 
         for item in booking["items"]:
 
             pending = (
                 item["quantity"]
                 -
-                item["returned_qty"]
+                item.get(
+                    "returned_qty",
+                    0
+                )
             )
 
             if pending > 0:
 
-                print(
-                    f"  {get_item_name(item['item_id'])}"
-                    f" | Pending: "
-                    f"{pending}"
-                )
+                rows.append([
+                    booking[
+                        "booking_id"
+                    ],
+                    customer_name,
+                    get_item_name(
+                        item["item_id"]
+                    ),
+                    pending
+                ])
+
+    if not rows:
 
         print(
-            "-" * 40
+            "No items currently out."
         )
+
+        return
+
+    export_to_excel(
+        "items_out_report.xlsx",
+        [
+            "Booking ID",
+            "Customer",
+            "Item",
+            "Pending Qty"
+        ],
+        rows
+    )

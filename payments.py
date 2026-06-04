@@ -69,6 +69,8 @@ def get_money(prompt):
 
 def get_booking(booking_id):
 
+    booking_id = booking_id.strip().upper()
+
     bookings = load_data(
         BOOKINGS_FILE
     )
@@ -76,7 +78,7 @@ def get_booking(booking_id):
     for booking in bookings:
 
         if (
-            booking["booking_id"]
+            booking["booking_id"].upper()
             ==
             booking_id
         ):
@@ -84,7 +86,6 @@ def get_booking(booking_id):
             return booking
 
     return None
-
 
 def get_total_payments(
     booking_id
@@ -110,20 +111,28 @@ def get_total_payments(
 
     return total
 
-
 def get_balance_due(
     booking
 ):
 
-    total_amount = Decimal(
-        booking[
-            "total_rental_amount"
-        ]
-    )
+    try:
 
-    advance = Decimal(
-        booking["advance"]
-    )
+        total_amount = Decimal(
+            booking[
+                "total_rental_amount"
+            ]
+        )
+
+        advance = Decimal(
+            booking["advance"]
+        )
+
+    except (
+        InvalidOperation,
+        KeyError
+    ):
+
+        return Decimal("0.00")
 
     total_paid = (
         get_total_payments(
@@ -133,7 +142,7 @@ def get_balance_due(
         )
     )
 
-    return (
+    balance = (
         total_amount
         -
         advance
@@ -141,12 +150,24 @@ def get_balance_due(
         total_paid
     )
 
+    return max(
+        Decimal("0.00"),
+        balance
+    )
 
 def booking_summary():
 
     booking_id = input(
         "Booking ID: "
     ).strip()
+
+    if booking_id == "":
+
+        print(
+            "Booking ID cannot be empty."
+        )
+
+        return
 
     booking = get_booking(
         booking_id
@@ -160,23 +181,38 @@ def booking_summary():
 
         return
 
-    total_amount = Decimal(
-        booking[
-            "total_rental_amount"
-        ]
-    )
+    try:
 
-    advance = Decimal(
-        booking["advance"]
-    )
+        total_amount = Decimal(
+            booking[
+                "total_rental_amount"
+            ]
+        )
 
-    deposit = Decimal(
-        booking["deposit"]
-    )
+        advance = Decimal(
+            booking["advance"]
+        )
+
+        deposit = Decimal(
+            booking["deposit"]
+        )
+
+    except (
+        InvalidOperation,
+        KeyError
+    ):
+
+        print(
+            "Booking contains invalid payment data."
+        )
+
+        return
 
     total_paid = (
         get_total_payments(
-            booking_id
+            booking[
+                "booking_id"
+            ]
         )
     )
 
@@ -186,11 +222,18 @@ def booking_summary():
         )
     )
 
-    print("\n========== SUMMARY ==========\n")
+    print(
+        "\n========== SUMMARY ==========\n"
+    )
 
     print(
         f"Booking ID   : "
-        f"{booking_id}"
+        f"{booking['booking_id']}"
+    )
+
+    print(
+        f"Status       : "
+        f"{booking.get('status', 'OPEN')}"
     )
 
     print(
@@ -218,12 +261,20 @@ def booking_summary():
         f"₹{deposit:.2f}"
     )
 
-
+    
 def record_payment():
 
     booking_id = input(
         "Booking ID: "
     ).strip()
+
+    if booking_id == "":
+
+        print(
+            "Booking ID cannot be empty."
+        )
+
+        return
 
     booking = get_booking(
         booking_id
@@ -239,8 +290,9 @@ def record_payment():
 
     if (
         booking.get(
-            "status"
-        )
+            "status",
+            ""
+        ).upper()
         ==
         "CLOSED"
     ):
@@ -274,6 +326,14 @@ def record_payment():
         "Payment Amount: "
     )
 
+    if amount <= 0:
+
+        print(
+            "Payment must be greater than zero."
+        )
+
+        return
+
     if amount > balance_due:
 
         print(
@@ -294,7 +354,9 @@ def record_payment():
             ),
 
         "booking_id":
-            booking_id,
+            booking[
+                "booking_id"
+            ],
 
         "amount":
             f"{amount:.2f}"
@@ -309,6 +371,17 @@ def record_payment():
         payments
     )
 
+    remaining = (
+        balance_due
+        -
+        amount
+    )
+
     print(
-        "Payment recorded successfully."
+        "\nPayment recorded successfully."
+    )
+
+    print(
+        f"Remaining Balance: "
+        f"₹{remaining:.2f}"
     )

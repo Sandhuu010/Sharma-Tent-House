@@ -1,0 +1,2 @@
+maintenance_id,item_id,quantity,reason,sent_date,status
+MAIN_001,ITEM_001,3,Broken Legs,2026-06-02,UNDER_MAINTENANCE

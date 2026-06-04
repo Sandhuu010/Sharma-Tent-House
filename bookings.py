@@ -5,6 +5,8 @@ from decimal import (
     InvalidOperation
 )
 
+from excel_export import export_to_excel
+
 from storage import load_data, save_data
 
 from customers import (
@@ -51,8 +53,8 @@ def generate_booking_id(bookings):
 def get_datetime(text):
 
     formats = [
-        "%Y-%m-%d",
-        "%Y-%m-%d %H:%M"
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d"
     ]
 
     for fmt in formats:
@@ -247,6 +249,184 @@ def calculate_rental_total(
 
     return total
 
+def search_item_for_booking(
+    items,
+    query_start,
+    query_end
+):
+
+    while True:
+
+        search = input(
+            "\nSearch Item: "
+        ).strip().lower()
+
+        if not search:
+
+            print(
+                "Search cannot be empty."
+            )
+
+            continue
+
+        matches = []
+
+        for item in items:
+
+            if search in item["name"].lower():
+
+                available = (
+                    get_available_quantity(
+                        item["item_id"],
+                        query_start,
+                        query_end
+                    )
+                )
+
+                if available > 0:
+
+                    matches.append(
+                        (
+                            item,
+                            available
+                        )
+                    )
+
+        if not matches:
+
+            print(
+                "No matching available item found."
+            )
+
+            continue
+
+        print("\nMatching Items:\n")
+
+        for index, (
+            item,
+            available
+        ) in enumerate(
+            matches,
+            start=1
+        ):
+
+            print(
+                f"{index}. "
+                f"{item['name']}"
+            )
+
+            print(
+                f"   Item ID       : "
+                f"{item['item_id']}"
+            )
+
+            print(
+                f"   Available Qty : "
+                f"{available}"
+            )
+
+            print(
+                f"   Rate          : "
+                f"₹{item['rate']}"
+            )
+
+            print("-" * 40)
+
+        choice = input(
+            "\nSelect Item Number: "
+        ).strip()
+
+        if (
+            choice.isdigit()
+            and
+            1 <= int(choice) <= len(matches)
+        ):
+
+            return matches[
+                int(choice) - 1
+            ][0]
+
+        print(
+            "Invalid choice."
+        )
+
+def show_booking_summary(
+    booking,
+    customer
+):
+
+    print("\n" + "=" * 50)
+
+    print(
+        "\nBOOKING CREATED SUCCESSFULLY\n"
+    )
+
+    print(
+        f"Booking ID : "
+        f"{booking['booking_id']}"
+    )
+
+    print(
+        f"Customer   : "
+        f"{customer['name']}"
+    )
+
+    print(
+        f"Occasion   : "
+        f"{booking['occasion']}"
+    )
+
+    print(
+        f"Start      : "
+        f"{booking['start_date']}"
+    )
+
+    print(
+        f"Return     : "
+        f"{booking['return_datetime']}"
+    )
+
+    print("\nItems:")
+
+    for item in booking["items"]:
+
+        print(
+            f"{item['item_name']} "
+            f"| Qty: {item['quantity']}"
+        )
+
+    print(
+        f"\nRental Total : ₹"
+        f"{booking['total_rental_amount']}"
+    )
+
+    print(
+        f"Discount     : ₹"
+        f"{booking['discount']}"
+    )
+
+    print(
+        f"Final Amount : ₹"
+        f"{booking['final_amount']}"
+    )
+
+    print(
+        f"Advance      : ₹"
+        f"{booking['advance']}"
+    )
+
+    print(
+        f"Deposit      : ₹"
+        f"{booking['deposit']}"
+    )
+
+    print(
+        f"Balance      : ₹"
+        f"{booking['balance_due']}"
+    )
+
+    print("\n" + "=" * 50)
+
 def create_booking():
 
     customer = (
@@ -272,99 +452,72 @@ def create_booking():
 
         return
 
-    start_date = input(
-        "Start date [YYYY-MM-DD]: "
-    ).strip()
-
-    return_date = input(
-        "Return date [YYYY-MM-DD HH:MM]: "
-    ).strip()
-
-    query_start = get_datetime(
-        start_date
-    )
-
-    query_end = get_datetime(
-        return_date
-    )
-
-    if (
-        not query_start
-        or
-        not query_end
-    ):
-
-        print("Invalid date.")
-        return
-
-    if query_end <= query_start:
+    while True:
 
         print(
-            "Return date must be after start date."
+            "\nExample: 2026-06-15 10:00"
         )
 
-        return
+        start_date = input(
+            "Start Date [YYYY-MM-DD HH:MM]: "
+        ).strip()
+
+        return_date = input(
+            "Return Date [YYYY-MM-DD HH:MM]: "
+        ).strip()
+
+        query_start = get_datetime(
+            start_date
+        )
+
+        query_end = get_datetime(
+            return_date
+        )
+
+        if (
+            not query_start
+            or
+            not query_end
+        ):
+
+            print(
+                "Invalid date format."
+            )
+
+            continue
+
+        if query_end <= query_start:
+
+            print(
+                "Return date must be after start date."
+            )
+
+            continue
+
+        break
+
+    occasion = input(
+        "Occasion: "
+    ).strip()
+
+    if not occasion:
+
+        occasion = "General"
 
     booking_items = []
 
     while True:
 
-        print(
-            "\nAvailable Items:\n"
+        selected_item = (
+            search_item_for_booking(
+                items,
+                query_start,
+                query_end
+            )
         )
 
-        for item in items:
-
-         print(
-        f"{item['item_id']} | "
-        f"{item['name']} | "
-        f"Qty: {item['total_quantity']} | "
-        f"Rate: ₹{item['rate']}"
-        )
-
-        item_id = input(
-            "\nEnter Item ID: "
-        ).strip()
-
-        selected_item = None
-
-        for item in items:
-
-            if (
-                item["item_id"]
-                ==
-                item_id
-            ):
-
-                selected_item = item
-                break
-
-        if not selected_item:
-
-            print(
-                "Invalid Item ID."
-            )
-
-            continue
-
-        quantity_text = input(
-            "Quantity: "
-        ).strip()
-
-        if (
-            not quantity_text.isdigit()
-            or
-            int(quantity_text) <= 0
-        ):
-
-            print(
-                "Invalid quantity."
-            )
-
-            continue
-
-        quantity = int(
-            quantity_text
+        item_id = (
+            selected_item["item_id"]
         )
 
         available = (
@@ -375,22 +528,44 @@ def create_booking():
             )
         )
 
-        if quantity > available:
+        while True:
 
-            print(
-                f"Only {available} available."
+            qty_text = input(
+                f"Quantity (Available {available}): "
+            ).strip()
+
+            if (
+                not qty_text.isdigit()
+                or
+                int(qty_text) <= 0
+            ):
+
+                print(
+                    "Invalid quantity."
+                )
+
+                continue
+
+            quantity = int(
+                qty_text
             )
 
-            continue
+            if quantity > available:
 
-        duplicate = False
+                print(
+                    f"Only {available} available."
+                )
+
+                continue
+
+            break
+
+        found = False
 
         for booked_item in booking_items:
 
             if (
-                booked_item[
-                    "item_id"
-                ]
+                booked_item["item_id"]
                 ==
                 item_id
             ):
@@ -399,16 +574,19 @@ def create_booking():
                     "quantity"
                 ] += quantity
 
-                duplicate = True
+                found = True
 
                 break
 
-        if not duplicate:
+        if not found:
 
             booking_items.append(
                 {
                     "item_id":
                         item_id,
+
+                    "item_name":
+                        selected_item["name"],
 
                     "quantity":
                         quantity,
@@ -428,7 +606,7 @@ def create_booking():
     if not booking_items:
 
         print(
-            "No items added."
+            "No items selected."
         )
 
         return
@@ -440,21 +618,50 @@ def create_booking():
     )
 
     print(
-        f"\nRental Total = "
+        f"\nRental Total : "
         f"₹{rental_total:.2f}"
     )
 
-    advance = get_money(
-        "Advance Received: "
-    )
+    while True:
 
-    if advance > rental_total:
-
-        print(
-            "Advance cannot exceed rental total."
+        discount = get_money(
+            "Discount: "
         )
 
-        return
+        if discount > rental_total:
+
+            print(
+                "Discount cannot exceed rental amount."
+            )
+
+            continue
+
+        break
+
+    final_total = (
+        rental_total - discount
+    )
+
+    print(
+        f"Final Total : "
+        f"₹{final_total:.2f}"
+    )
+
+    while True:
+
+        advance = get_money(
+            "Advance Received: "
+        )
+
+        if advance > final_total:
+
+            print(
+                "Advance cannot exceed final amount."
+            )
+
+            continue
+
+        break
 
     deposit = get_money(
         "Security Deposit: "
@@ -462,41 +669,47 @@ def create_booking():
 
     booking = {
 
-    "booking_id":
-        generate_booking_id(
-            bookings
-        ),
+        "booking_id":
+            generate_booking_id(
+                bookings
+            ),
 
-    "cust_id":
-        customer["cust_id"],
+        "cust_id":
+            customer["cust_id"],
 
-    "status":
-        "OPEN",
+        "occasion":
+            occasion,
 
-    "start_date":
-        start_date,
+        "status":
+            "OPEN",
 
-    "return_datetime":
-        return_date,
+        "start_date":
+            start_date,
 
-    "total_rental_amount":
-        f"{rental_total:.2f}",
+        "return_datetime":
+            return_date,
 
-    "advance":
-        f"{advance:.2f}",
+        "discount":
+            f"{discount:.2f}",
 
-    "deposit":
-        f"{deposit:.2f}",
+        "total_rental_amount":
+            f"{final_total:.2f}",
 
-    "damage_amount":
-        "0.00",
+        "advance":
+            f"{advance:.2f}",
 
-    "damage_settled":
-        True,
+        "deposit":
+            f"{deposit:.2f}",
 
-    "items":
-        booking_items
-}
+        "damage_amount":
+            "0.00",
+
+        "damage_settled":
+            True,
+
+        "items":
+            booking_items
+    }
 
     bookings.append(
         booking
@@ -508,84 +721,151 @@ def create_booking():
     )
 
     print(
-        f"\n{booking['booking_id']} "
-        f"created successfully."
+        "\n========== BOOKING SUMMARY =========="
     )
 
     print(
-        f"Customer : "
+        f"Booking ID : "
+        f"{booking['booking_id']}"
+    )
+
+    print(
+        f"Customer   : "
         f"{customer['name']}"
     )
 
     print(
-        f"Rental Total : "
-        f"₹{rental_total:.2f}"
+        f"Phone      : "
+        f"{customer['phone']}"
     )
 
     print(
-        f"Advance : "
-        f"₹{advance:.2f}"
+        f"Occasion   : "
+        f"{occasion}"
     )
 
     print(
-        f"Deposit : "
-        f"₹{deposit:.2f}"
+        f"Start      : "
+        f"{start_date}"
     )
 
+    print(
+        f"Return     : "
+        f"{return_date}"
+    )
+
+    print("\nItems:")
+
+    for item in booking_items:
+
+        print(
+            f"{item['item_name']} "
+            f"| Qty: {item['quantity']}"
+        )
+
+    print(
+        f"\nDiscount : ₹{discount:.2f}"
+    )
+
+    print(
+        f"Final Total : ₹{final_total:.2f}"
+    )
+
+    print(
+        f"Advance : ₹{advance:.2f}"
+    )
+
+    print(
+        f"Deposit : ₹{deposit:.2f}"
+    )
+
+    print(
+        "\nBooking created successfully."
+    )
 
 def check_availability():
 
-    item_id = input(
-        "Enter Item ID: "
-    ).strip()
+    items = load_data(ITEMS_FILE)
+
+    if not items:
+        print("No items available.")
+        return
+
+    # STEP 1: SEARCH BY NAME (NEW UX)
+    while True:
+
+        search = input("\nSearch Item Name: ").strip().lower()
+
+        matches = []
+
+        for item in items:
+
+            if search in item["name"].lower():
+                matches.append(item)
+
+        if not matches:
+            print("No matching items found.")
+            continue
+
+        print("\nMatching Items:\n")
+
+        for index, item in enumerate(matches, start=1):
+
+            print(
+                f"{index}. {item['name']} | "
+                f"Qty: {item['total_quantity']} | "
+                f"Rate: ₹{item['rate']}"
+            )
+
+        choice = input("\nSelect Item Number: ").strip()
+
+        if (
+            choice.isdigit()
+            and 1 <= int(choice) <= len(matches)
+        ):
+            selected_item = matches[int(choice) - 1]
+            break
+
+        print("Invalid choice. Try again.")
+
+    # STEP 2: DATE INPUT (same workflow as before)
+    print("\nExample: 2026-06-15 10:00")
 
     start_date = input(
-        "Start date [YYYY-MM-DD]: "
+        "Start date [YYYY-MM-DD HH:MM]: "
     ).strip()
 
     return_date = input(
         "Return date [YYYY-MM-DD HH:MM]: "
     ).strip()
 
-    query_start = get_datetime(
-        start_date
-    )
+    query_start = get_datetime(start_date)
+    query_end = get_datetime(return_date)
 
-    query_end = get_datetime(
-        return_date
-    )
-
-    if (
-        not query_start
-        or
-        not query_end
-    ):
-
+    if not query_start or not query_end:
         print("Invalid date.")
         return
 
-    available = (
-        get_available_quantity(
-            item_id,
-            query_start,
-            query_end
-        )
+    if query_end <= query_start:
+        print("Return date must be after start date.")
+        return
+
+    # STEP 3: AVAILABILITY CHECK (unchanged logic)
+    item_id = selected_item["item_id"]
+
+    available = get_available_quantity(
+        item_id,
+        query_start,
+        query_end
     )
-    
-    maintenance_qty = (
-        get_maintenance_quantity(
-        item_id
-        )
-)
-    print(
-        f"Available Quantity: "
-        f"{available}"
-    )
-    
-    print(
-        f"Under Maintenance  : "
-        f"{maintenance_qty}"
-)
+
+    maintenance_qty = get_maintenance_quantity(item_id)
+
+    print("\n========== AVAILABILITY ==========")
+    print(f"Item        : {selected_item['name']}")
+    print(f"Available   : {available}")
+    print(f"Maintenance : {maintenance_qty}")
+    print("=================================")
 
 def mark_return():
 
@@ -703,126 +983,46 @@ def mark_return():
         "Return recorded."
     )
 
-
 def list_bookings():
 
-    bookings = load_data(
-        BOOKINGS_FILE
-    )
-
-    customers = load_data(
-        CUSTOMERS_FILE
-    )
+    bookings = load_data(BOOKINGS_FILE)
+    customers = load_data(CUSTOMERS_FILE)
 
     if not bookings:
-
-        print(
-            "No bookings yet."
-        )
-
+        print("No bookings found.")
         return
+
+    rows = []
 
     for booking in bookings:
 
-        customer_name = (
-            "Unknown Customer"
-        )
-
+        customer_name = ""
         customer_phone = ""
 
-        if "cust_id" in booking:
+        for customer in customers:
 
-            for customer in customers:
+            if customer["cust_id"] == booking["cust_id"]:
+                customer_name = customer["name"]
+                customer_phone = customer["phone"]
+                break
 
-                if (
-                    customer["cust_id"]
-                    ==
-                    booking["cust_id"]
-                ):
+        rows.append({
+            "Booking ID": booking["booking_id"],
+            "Customer": customer_name,
+            "Phone": customer_phone,
+            "Occasion": booking.get("occasion", ""),
+            "Status": booking.get("status", "OPEN"),
+            "Amount": booking.get("total_rental_amount", "0.00"),
+            "Start Date": booking["start_date"],
+            "Return Date": booking["return_datetime"]
+        })
 
-                    customer_name = (
-                        customer["name"]
-                    )
+    export_to_excel(
+        "bookings.xlsx",
+        rows
+    )
 
-                    customer_phone = (
-                        customer["phone"]
-                    )
-
-                    break
-
-        print(
-            f"\nBooking ID : "
-            f"{booking['booking_id']}"
-        )
-
-        print(
-            f"Customer   : "
-            f"{customer_name}"
-        )
-
-        print(
-            f"Phone      : "
-            f"{customer_phone}"
-        )
-
-        print(
-            f"Status     : "
-            f"{booking.get('status', 'OPEN')}"
-        )
-        
-        print(
-            f"Rental Amt  : ₹"
-            f"{booking.get('total_rental_amount', '0.00')}"
-        )
-
-        print(
-            f"Advance     : ₹"
-            f"{booking.get('advance', '0.00')}"
-        )
-
-        print(
-            f"Deposit     : ₹"
-            f"{booking.get('deposit', '0.00')}"
-        )
-
-        print(
-            f"Damage Amt  : ₹"
-            f"{booking.get('damage_amount', '0.00')}"
-        )
-
-        print(
-            f"Damage Done : "
-            f"{booking.get('damage_settled', False)}"
-        )
-        print(
-            f"Start Date : "
-            f"{booking['start_date']}"
-        )
-
-        print(
-            f"Return Date: "
-            f"{booking['return_datetime']}"
-        )
-
-        print("\nItems:")
-
-        for item in booking["items"]:
-
-           pending = (
-             item["quantity"]
-             -
-             item["returned_qty"]
-           )
-
-           print(
-              f"{item['item_id']} "
-              f"| Qty: {item['quantity']} "
-              f"| Returned: {item['returned_qty']} "
-              f"| Pending: {pending}"
-           )
-
-        print("-" * 40)
-
+    
 def get_booking_by_id(
     booking_id
 ):
